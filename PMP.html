@@ -1,0 +1,585 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Flowchart</title>
+    <meta name="description" content="Interactive flowchart diagram implemented by GoJS in JavaScript for HTML." />
+    <!-- Copyright 1998-2016 by Northwoods Software Corporation. -->
+    <meta charset="UTF-8">
+    <script src="js/go.js"></script>
+    <script id="code">
+        function init() {
+            var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+            myDiagram =
+              $(go.Diagram, "myDiagramDiv",  // must name or refer to the DIV HTML element
+                {
+                    initialContentAlignment: go.Spot.Center,
+                    allowDrop: true,  // must be true to accept drops from the Palette
+                    "LinkDrawn": showLinkLabel,  // this DiagramEvent listener is defined below
+                    "LinkRelinked": showLinkLabel,
+                    "animationManager.duration": 800, // slightly longer than default (600ms) animation
+                    "undoManager.isEnabled": true,  // enable undo & redo
+                    "grid.visible": false,
+                    grid:
+                        $(go.Panel, "Grid",
+                            {
+                                gridCellSize: new go.Size(20, 20)
+                            }
+                            //$(go.Shape, "LineH",
+                            //{
+                            //    stroke: "lightgray"
+                            //}),
+                            //$(go.Shape, "LineV",
+                            //{
+                            //    stroke: "lightgray"
+                            //})
+                    ),
+                    "draggingTool.isGridSnapEnabled": true,
+                    "draggingTool.gridSnapCellSpot": go.Spot.Left,
+                    "commandHandler.archetypeGroupData": {
+                        text: "Group",
+                        isGroup: true,
+                        color: "blue",
+                        editable: true
+                    }
+                });// end Group and call to add to template Map
+
+
+            // when the document is modified, add a "*" to the title and enable the "Save" button
+            myDiagram.addDiagramListener("Modified", function (e) {
+                var button = document.getElementById("SaveButton");
+                if (button) button.disabled = !myDiagram.isModified;
+                var idx = document.title.indexOf("*");
+                if (myDiagram.isModified) {
+                    if (idx < 0) document.title += "*";
+                } else {
+                    if (idx >= 0) document.title = document.title.substr(0, idx);
+                }
+            });
+
+            // helper definitions for node templates
+
+            function nodeStyle() {
+                return [
+                  // The Node.location comes from the "loc" property of the node data,
+                  // converted by the Point.parse static method.
+                  // If the Node.location is changed, it updates the "loc" property of the node data,
+                  // converting back using the Point.stringify static method.
+                  new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+                  {
+                      // the Node.location is at the center of each node
+                      locationSpot: go.Spot.Center,
+                      zOrder: 10,
+                      //isShadowed: true,
+                      //shadowColor: "#888",
+                      // handle mouse enter/leave events to show/hide the ports
+                      mouseEnter: function (e, obj) { showPorts(obj.part, true); },
+                      mouseLeave: function (e, obj) { showPorts(obj.part, false); },
+                      selectionChanged: function (node) {
+                          var diagram = node.diagram;
+
+                          diagram.clearHighlighteds();
+
+                          diagram.nodes.each(function (obj) {
+                              obj.opacity = 0.2;
+                          });
+
+                          diagram.links.each(function (obj) {
+                              obj.opacity = 0.2;
+                          });
+
+                          var isHighlighted = node.isSelected;
+                          node.data.isInput = true;
+                          node.isHighlighted = isHighlighted;
+                          node.opacity = 1;
+
+                          node.findLinksInto().each(function (link) {
+                              link.data.isInput = true;
+                              link.isHighlighted = isHighlighted;
+                              link.opacity = 1;
+
+                              var otherNode = link.getOtherNode(node);
+                              otherNode.data.isInput = true;
+                              otherNode.isHighlighted = isHighlighted;
+                              otherNode.opacity = 1;
+                          });
+
+                          node.findLinksOutOf().each(function (link) {
+                              link.data.isInput = false;
+                              link.isHighlighted = isHighlighted;
+                              link.opacity = 1;
+
+                              var otherNode = link.getOtherNode(node);
+                              otherNode.data.isInput = false;
+                              otherNode.isHighlighted = isHighlighted;
+                              otherNode.opacity = 1;
+                          });
+
+                          if (!isHighlighted) {
+                              diagram.nodes.each(function (obj) {
+                                  obj.opacity = 1;
+                              });
+
+                              diagram.links.each(function (obj) {
+                                  obj.opacity = 1;
+                              });
+                          }
+                      },
+                  }
+                ];
+            }
+
+            // Define a function for creating a "port" that is normally transparent.
+            // The "name" is used as the GraphObject.portId, the "spot" is used to control how links connect
+            // and where the port is positioned on the node, and the boolean "output" and "input" arguments
+            // control whether the user can draw links from or to the port.
+            function makePort(name, spot, output, input) {
+                // the port is basically just a small circle that has a white stroke when it is made visible
+                return $(go.Shape, "Circle",
+                         {
+                             fill: "transparent",
+                             stroke: null,  // this is changed to "white" in the showPorts function
+                             desiredSize: new go.Size(8, 8),
+                             alignment: spot, alignmentFocus: spot,  // align the port on the main Shape
+                             portId: name,  // declare this object to be a "port"
+                             fromSpot: spot, toSpot: spot,  // declare where links may connect at this port
+                             fromLinkable: output, toLinkable: input,  // declare whether the user may draw links to/from here
+                             cursor: "pointer"  // show a different cursor to indicate potential link point
+                         });
+            }
+
+            // define the Node templates for regular nodes
+
+            var lightText = 'whitesmoke';
+
+            myDiagram.nodeTemplateMap.add("",  // the default category
+              $(go.Node, "Spot", nodeStyle(),
+                // the main object is a Panel that surrounds a TextBlock with a rectangular Shape
+                $(go.Panel, "Auto",
+                  $(go.Shape, "Rectangle",
+                    {
+                        fill: "#00A9C9",
+                        stroke: null,
+                        strokeWidth: 2
+                    },
+                    new go.Binding("figure", "figure"),
+                    new go.Binding("stroke", "isHighlighted", function (data, obj) {
+                        var color = obj.part.data.isInput ? "red" : "green";
+
+                        return data ? color : "whitesmoke";
+                    }).ofObject(),
+                    new go.Binding("fill", "color").makeTwoWay()),
+                  $(go.TextBlock,
+                    {
+                        name: "TEXTBLOCK",
+                        font: "bold 11pt Helvetica, Arial, sans-serif",
+                        stroke: lightText,
+                        margin: 8,
+                        maxSize: new go.Size(160, NaN),
+                        wrap: go.TextBlock.WrapFit,
+                        editable: true
+                    },
+                    new go.Binding("text").makeTwoWay())
+                ),
+                // four named ports, one on each side:
+                makePort("T", go.Spot.Top, false, true),
+                makePort("L", go.Spot.Left, true, true),
+                makePort("R", go.Spot.Right, true, true),
+                makePort("B", go.Spot.Bottom, true, false)
+              ));
+
+            myDiagram.nodeTemplateMap.add("Start",
+              $(go.Node, "Spot", nodeStyle(),
+                $(go.Panel, "Auto",
+                  $(go.Shape, "Circle",
+                    { minSize: new go.Size(40, 40), fill: "#79C900", stroke: null }),
+                  $(go.TextBlock, "Start",
+                    {
+                        editable: true,
+                        font: "bold 11pt Helvetica, Arial, sans-serif",
+                        stroke: lightText
+                    },
+                    new go.Binding("text"))
+                ),
+                // three named ports, one on each side except the top, all output only:
+                makePort("L", go.Spot.Left, true, false),
+                makePort("R", go.Spot.Right, true, false),
+                makePort("B", go.Spot.Bottom, true, false)
+              ));
+
+            myDiagram.nodeTemplateMap.add("End",
+              $(go.Node, "Spot", nodeStyle(),
+                $(go.Panel, "Auto",
+                  $(go.Shape, "Circle",
+                    { minSize: new go.Size(40, 40), fill: "#DC3C00", stroke: null }),
+                  $(go.TextBlock, "End",
+                    {
+                        editable: true,
+                        font: "bold 11pt Helvetica, Arial, sans-serif",
+                        stroke: lightText
+                    },
+                    new go.Binding("text"))
+                ),
+                // three named ports, one on each side except the bottom, all input only:
+                makePort("T", go.Spot.Top, false, true),
+                makePort("L", go.Spot.Left, false, true),
+                makePort("R", go.Spot.Right, false, true)
+              ));
+
+            myDiagram.nodeTemplateMap.add("Comment",
+              $(go.Node, "Auto", nodeStyle(),
+                $(go.Shape, "File",
+                  { fill: "#EFFAB4", stroke: null }),
+                $(go.TextBlock,
+                  {
+                      margin: 5,
+                      maxSize: new go.Size(200, NaN),
+                      wrap: go.TextBlock.WrapFit,
+                      textAlign: "center",
+                      editable: true,
+                      font: "bold 12pt Helvetica, Arial, sans-serif",
+                      stroke: '#454545'
+                  },
+                  new go.Binding("text").makeTwoWay())
+                // no ports, because no links are allowed to connect with a comment
+              ));
+
+
+            // replace the default Link template in the linkTemplateMap
+            myDiagram.linkTemplate =
+              $(go.Link,  // the whole link panel
+                {
+                    routing: go.Link.AvoidsNodes,
+                    curve: go.Link.JumpOver,
+                    corner: 5, toShortLength: 4,
+                    relinkableFrom: true,
+                    relinkableTo: true,
+                    reshapable: true,
+                    resegmentable: true,
+                    zOrder: 5,
+                    // mouse-overs subtly highlight links:
+                    mouseEnter: function (e, link) { link.findObject("HIGHLIGHT").stroke = "rgba(30,144,255,0.2)"; },
+                    mouseLeave: function (e, link) { link.findObject("HIGHLIGHT").stroke = "transparent"; }
+                },
+                new go.Binding("points").makeTwoWay(),
+                $(go.Shape,  // the highlight shape, normally transparent
+                  { isPanelMain: true, strokeWidth: 8, stroke: "transparent", name: "HIGHLIGHT" }),
+                $(go.Shape,  // the link path shape
+                  { isPanelMain: true, stroke: "gray", strokeWidth: 2 },
+                  new go.Binding("stroke", "isHighlighted", function (data, obj) {
+                      var color = obj.part.data.isInput ? "red" : "green";
+
+                      return data ? color : "gray";
+                  }).ofObject()
+                  ),
+                $(go.Shape,  // the arrowhead
+                  { toArrow: "standard", stroke: null, fill: "gray" },
+                  new go.Binding("stroke", "isHighlighted", function (data, obj) {
+                      var color = obj.part.data.isInput ? "red" : "green";
+
+                      return data ? color : "gray";
+                  }).ofObject()),
+                $(go.Panel, "Auto",  // the link label, normally not visible
+                  { visible: false, name: "LABEL", segmentIndex: 2, segmentFraction: 0.5 },
+                  new go.Binding("visible", "visible").makeTwoWay(),
+                  $(go.Shape, "RoundedRectangle",  // the label shape
+                    { fill: "#F8F8F8", stroke: null }),
+                  $(go.TextBlock, "Yes",  // the label
+                    {
+                        textAlign: "center",
+                        font: "10pt helvetica, arial, sans-serif",
+                        stroke: "#333333",
+                        editable: true
+                    },
+                    new go.Binding("text").makeTwoWay())
+                )
+              );
+
+            // Make link labels visible if coming out of a "conditional" node.
+            // This listener is called by the "LinkDrawn" and "LinkRelinked" DiagramEvents.
+            function showLinkLabel(e) {
+                var label = e.subject.findObject("LABEL");
+                if (label !== null) label.visible = (e.subject.fromNode.data.figure === "Diamond");
+            }
+
+            // temporary links used by LinkingTool and RelinkingTool are also orthogonal:
+            myDiagram.toolManager.linkingTool.temporaryLink.routing = go.Link.Orthogonal;
+            myDiagram.toolManager.relinkingTool.temporaryLink.routing = go.Link.Orthogonal;
+
+            load();  // load an initial diagram from some JSON text
+
+            // initialize the Palette that is on the left side of the page
+            myPalette =
+              $(go.Palette, "myPaletteDiv",  // must name or refer to the DIV HTML element
+                {
+                    "animationManager.duration": 800, // slightly longer than default (600ms) animation
+                    nodeTemplateMap: myDiagram.nodeTemplateMap,  // share the templates used by myDiagram
+                    model: new go.GraphLinksModel([  // specify the contents of the Palette
+                      { category: "Start", text: "Start" },
+                      { text: "Step" },
+                      { text: "???", figure: "Diamond" },
+                      { category: "End", text: "End" },
+                      { category: "Comment", text: "Comment" }
+                    ])
+                });
+
+        }
+
+        // Make all ports on a node visible when the mouse is over the node
+        function showPorts(node, show) {
+            var diagram = node.diagram;
+            if (!diagram || diagram.isReadOnly || !diagram.allowLink) return;
+            node.ports.each(function (port) {
+                port.stroke = (show ? "white" : null);
+            });
+        }
+
+
+        // Show the diagram's model in JSON format that the user may edit
+        function save() {
+            document.getElementById("mySavedModel").value = myDiagram.model.toJson();
+            myDiagram.isModified = false;
+        }
+        function load() {
+            myDiagram.model = go.Model.fromJson(document.getElementById("mySavedModel").value);
+        }
+
+        // add an SVG rendering of the diagram at the end of this page
+        function makeSVG() {
+            var svg = myDiagram.makeSvg({
+                scale: 0.5
+            });
+            svg.style.border = "1px solid black";
+            obj = document.getElementById("SVGArea");
+            obj.appendChild(svg);
+            if (obj.children.length > 0) {
+                obj.replaceChild(svg, obj.children[0]);
+            }
+        }
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <h2>PMP学习</h2>
+        <div style="width:100%; white-space:nowrap;">
+            <span style="display: inline-block; vertical-align: top; padding: 5px; width:100px">
+                <div id="myPaletteDiv" style="border: solid 1px gray; height: 720px"></div>
+            </span>
+
+            <span style="display: inline-block; vertical-align: top; padding: 5px; width: 90%; background-color: #a4a4a4;">
+                <div id="myDiagramDiv" style="border: solid 1px gray; height: 720px"></div>
+            </span>
+        </div>
+        <button id="SaveButton" onclick="save()">Save</button>
+        <button onclick="load()">Load</button>
+        Diagram Model saved in JSON format:
+        <textarea id="mySavedModel" style="width:100%;height:300px">
+            { "class": "go.GraphLinksModel",
+            "linkFromPortIdProperty": "fromPort",
+            "linkToPortIdProperty": "toPort",
+            "nodeDataArray": [
+            {"text":"4.1 制定项目章程", "key":-2, "loc":"-27.241561889648438 -828.7000000000002", "group":-9, "color":"#00A9C9"},
+            {"text":"4.2 制定项目管理计划", "key":-4, "loc":"-127.24156188964844 -748.7000000000002", "group":-9, "color":"#00A9C9"},
+            {"text":"4.3 指导与管理项目工作", "key":-5, "loc":"-167.24156188964844 -668.7000000000002", "group":-9, "color":"#00A9C9"},
+            {"text":"4.5 实施整体变更控制", "key":-6, "loc":"-87.24156188964844 -468.70000000000016", "group":-9, "color":"#00A9C9"},
+            {"text":"4.6 结束项目或阶段", "key":-7, "loc":"-67.24156188964844 -368.70000000000016", "group":-9, "color":"#00A9C9"},
+            {"text":"4.4 监控项目工作", "key":-8, "loc":"-147.24156188964844 -568.7000000000002", "group":-9, "color":"#00A9C9"},
+            {"text":"第4章 项目整合管理", "isGroup":true, "color":"blue", "editable":true, "key":-9},
+            {"text":"项目工作说明书", "key":-10, "loc":"-674.1878814697269 -908.7000000000004", "group":-15, "color":"#DC3C00"},
+            {"text":"商业论证", "key":-11, "loc":"-694.1878814697263 -848.7000000000006", "group":-15, "color":"#DC3C00"},
+            {"text":"协议", "key":-12, "loc":"-700.0000000000002 -790.0000000000006", "group":-15, "color":"#DC3C00"},
+            {"text":"事业环境因素", "key":-13, "loc":"-701.6610412597653 -668.7000000000007", "group":-16, "color":"#DC3C00"},
+            {"text":"组织过程资产", "key":-14, "loc":"-701.661041259766 -608.7000000000007", "group":-16, "color":"#DC3C00"},
+            {"text":"项目启动者/发起人", "isGroup":true, "color":"blue", "editable":true, "key":-15},
+            {"text":"企业/组织", "isGroup":true, "color":"blue", "editable":true, "key":-16},
+            {"text":"专家判断", "key":-17, "loc":"-600 -1070", "group":-19, "color":"#79C900"},
+            {"text":"引导技术", "key":-18, "loc":"-560 -1130", "group":-19, "color":"#79C900"},
+            {"text":"工具与技术", "isGroup":true, "color":"blue", "editable":true, "key":-19},
+            {"text":"项目章程", "key":-20, "loc":"220 -850", "color":"#DC3C00"},
+            {"text":"项目管理计划", "key":-21, "loc":"220 -750", "color":"#DC3C00"},
+            {"text":"批准的变更请求", "key":-22, "loc":"280 -290", "color":"#DC3C00"},
+            {"text":"项目管理信息系统", "key":-23, "loc":"-380 -1050", "color":"#79C900"},
+            {"text":"会议", "key":-24, "loc":"40 -1010", "color":"#79C900"},
+            {"text":"可交付成果物", "key":-25, "loc":"280 -690", "color":"#DC3C00"},
+            {"text":"工作绩效数据", "key":-26, "loc":"300 -610", "color":"#DC3C00"},
+            {"text":"项目管理计划更新", "key":-27, "loc":"320 -370", "color":"#DC3C00"},
+            {"text":"变更请求", "key":-28, "loc":"280 -550", "color":"#DC3C00"},
+            {"text":"项目文件更新", "key":-29, "loc":"340 -490", "color":"#DC3C00"},
+            {"text":"其他过程的输出", "key":-30, "loc":"-700 -530", "color":"#DC3C00"},
+            {"text":"进度预测", "key":-31, "loc":"-700 -410", "color":"#DC3C00"},
+            {"text":"成本预测", "key":-32, "loc":"-700 -350", "color":"#DC3C00"},
+            {"text":"确认的变更", "key":-33, "loc":"-560 -250", "color":"#DC3C00"},
+            {"text":"工作绩效信息", "key":-34, "loc":"-40 -190", "color":"#DC3C00"},
+            {"text":"分析技术", "key":-35, "loc":"-320 -1190", "color":"#79C900"},
+            {"text":"工作绩效报告", "key":-36, "loc":"280 -430", "color":"#DC3C00"},
+            {"text":"变更控制工具", "key":-37, "loc":"-220 -1110", "color":"#79C900"},
+            {"text":"验收的可交付成果物", "key":-38, "loc":"-260 -190", "color":"#DC3C00"},
+            {"text":"最终产品、服务或成果移交", "key":-39, "loc":"280 -210", "color":"#DC3C00"},
+            {"text":"组织过程资产更新", "key":-40, "loc":"500 -170", "color":"#DC3C00"},
+            {"text":"5.1 规划范围管理", "key":-41, "loc":"770.3389587402343 -908.7000000000003", "group":-47, "color":"#00A9C9"},
+            {"text":"5.2 收集需求", "key":-42, "loc":"860 -790", "group":-47, "color":"#00A9C9"},
+            {"text":"5.4 创建WBS", "key":-43, "loc":"940 -610", "group":-47, "color":"#00A9C9"},
+            {"text":"5.3 定义范围", "key":-44, "loc":"940 -690", "group":-47, "color":"#00A9C9"},
+            {"text":"5.5 确认范围", "key":-45, "loc":"960 -510", "group":-47, "color":"#00A9C9"},
+            {"text":"5.6 控制范围", "key":-46, "loc":"860 -410", "group":-47, "color":"#00A9C9"},
+            {"text":"第5章 项目范围管理", "isGroup":true, "color":"blue", "editable":true, "key":-47},
+            {"text":"范围管理计划", "key":-48, "loc":"1180 -910", "color":"#DC3C00"},
+            {"text":"需求管理计划", "key":-49, "loc":"1240 -830", "color":"#DC3C00"},
+            {"text":"干系人管理计划", "key":-50, "loc":"520 -930", "color":"#DC3C00"},
+            {"text":"干系人登记册", "key":-51, "loc":"540 -850", "color":"#DC3C00"},
+            {"text":"问卷调查", "key":-52, "loc":"720 -1190", "color":"#79C900"},
+            {"text":"群体决策技术", "key":-53, "loc":"500 -1110", "color":"#79C900"},
+            {"text":"群体创新技术", "key":-54, "loc":"-20 -1110", "color":"#79C900"},
+            {"text":"引导式研讨会", "key":-55, "loc":"580 -1210", "color":"#79C900"},
+            {"text":"焦点小组", "key":-56, "loc":"440 -1210", "color":"#79C900"},
+            {"text":"访谈", "key":-57, "loc":"280 -1210", "color":"#79C900"},
+            {"text":"标杆对照", "key":-58, "loc":"780 -1090", "color":"#79C900"},
+            {"text":"原型法", "key":-59, "loc":"640 -1110", "color":"#79C900"},
+            {"text":"文件分析", "key":-60, "loc":"920 -1090", "color":"#79C900"},
+            {"text":"系统交互图", "key":-61, "loc":"1000 -1190", "color":"#79C900"},
+            {"text":"观察", "key":-62, "loc":"900 -1190", "color":"#79C900"},
+            {"text":"需求文件", "key":-63, "loc":"1180 -750", "color":"#DC3C00"},
+            {"text":"需求跟踪矩阵", "key":-64, "loc":"1200 -670", "color":"#DC3C00"},
+            {"text":"项目范围说明书", "key":-65, "loc":"1220 -610", "color":"#DC3C00"},
+            {"text":"产品分析", "key":-66, "loc":"200 -1090", "color":"#79C900"},
+            {"text":"备选方案生成", "key":-67, "loc":"60 -1210", "color":"#79C900"},
+            {"text":"分解", "key":-68, "loc":"1080 -1110", "color":"#79C900"},
+            {"text":"范围基准", "key":-69, "loc":"1200 -550", "color":"#DC3C00"},
+            {"text":"核实的可交付成果物", "key":-70, "loc":"520 -470", "color":"#DC3C00"},
+            {"text":"检查", "key":-71, "loc":"320 -1110", "color":"#79C900"},
+            {"text":"偏差分析", "key":-72, "loc":"1160 -1190", "color":"#79C900"}
+            ],
+            "linkDataArray": [
+            {"from":-10, "to":-2, "fromPort":"R", "toPort":"L", "points":[-613.3757629394535,-908.7000000000004,-603.3757629394535,-908.7000000000004,-352.9781417846681,-908.7000000000004,-352.9781417846681,-828.7,-102.58052062988276,-828.7,-92.58052062988276,-828.7]},
+            {"from":-11, "to":-2, "fromPort":"R", "toPort":"L", "points":[-655.7952423095701,-848.7000000000006,-645.7952423095701,-848.7000000000006,-374.18788146972645,-848.7000000000006,-374.18788146972645,-828.7,-102.58052062988276,-828.7,-92.58052062988276,-828.7]},
+            {"from":-12, "to":-2, "fromPort":"R", "toPort":"L", "points":[-676.5536804199221,-790.0000000000006,-666.5536804199221,-790.0000000000006,-384.56710052490246,-790.0000000000006,-384.56710052490246,-828.7,-102.58052062988276,-828.7,-92.58052062988276,-828.7]},
+            {"from":-13, "to":-2, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-370.4513015747068,-668.7000000000007,-370.4513015747068,-828.7,-102.58052062988276,-828.7,-92.58052062988276,-828.7]},
+            {"from":-14, "to":-2, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-370.45130157470714,-608.7000000000007,-370.45130157470714,-828.7,-102.58052062988276,-828.7,-92.58052062988276,-828.7]},
+            {"from":-17, "to":-2, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-949.3500000000003,-27.24156188964838,-949.3500000000003,-27.24156188964838,-855,-27.24156188964838,-845]},
+            {"from":-18, "to":-2, "fromPort":"B", "toPort":"T", "points":[-560,-1113.6999999999998,-560,-1103.6999999999998,-560,-979.3499999999999,-27.24156188964838,-979.3499999999999,-27.24156188964838,-855,-27.24156188964838,-845]},
+            {"from":-2, "to":-20, "fromPort":"R", "toPort":"L", "points":[38.097396850585994,-828.7,48.097396850585994,-828.7,109.85237884521487,-828.7,109.85237884521487,-850,171.60736083984375,-850,181.60736083984375,-850]},
+            {"from":-13, "to":-4, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-427.9244613647459,-668.7000000000007,-427.9244613647459,-748.7000000000002,-217.52684020996094,-748.7000000000002,-207.52684020996094,-748.7000000000002]},
+            {"from":-14, "to":-4, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-427.92446136474626,-608.7000000000007,-427.92446136474626,-748.7000000000002,-217.52684020996094,-748.7000000000002,-207.52684020996094,-748.7000000000002]},
+            {"from":-17, "to":-4, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1044,-600.0000000000002,-1044,-600.0000000000002,-1036,-596,-1036,-596,-828,-127.24156188964844,-828,-127.24156188964844,-775.0000000000001,-127.24156188964844,-765.0000000000001]},
+            {"from":-18, "to":-4, "fromPort":"B", "toPort":"T", "points":[-560,-1113.6999999999998,-560,-1103.6999999999998,-560,-1100,-560,-1100,-560,-828,-127.24156188964844,-828,-127.24156188964844,-775.0000000000001,-127.24156188964844,-765.0000000000001]},
+            {"from":-4, "to":-21, "fromPort":"R", "toPort":"L", "points":[-46.95628356933594,-748.7000000000002,-36.95628356933594,-748.7000000000002,59.852378845214844,-748.7000000000002,59.852378845214844,-750,156.66104125976562,-750,166.66104125976562,-750]},
+            {"from":-20, "to":-4, "fromPort":"B", "toPort":"T", "points":[220,-833.6999999999999,220,-823.6999999999999,220,-820,172,-820,172,-868,-268,-868,-268,-828,-127.24156188964844,-828,-127.24156188964844,-775.0000000000001,-127.24156188964844,-765.0000000000001]},
+            {"from":-21, "to":-5, "fromPort":"B", "toPort":"T", "points":[220,-733.6999999999999,220,-723.6999999999999,220,-709.3499999999999,-167.24156188964844,-709.3499999999999,-167.24156188964844,-694.9999999999998,-167.24156188964844,-684.9999999999998]},
+            {"from":-13, "to":-5, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-451.66104125976545,-668.7000000000007,-451.66104125976545,-668.6999999999998,-265,-668.6999999999998,-255,-668.6999999999998]},
+            {"from":-14, "to":-5, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-451.6610412597658,-608.7000000000007,-451.6610412597658,-668.6999999999998,-265,-668.6999999999998,-255,-668.6999999999998]},
+            {"from":-22, "to":-5, "fromPort":"R", "toPort":"L", "points":[340.81211853027344,-290,350.81211853027344,-290,350.81211853027344,-290,350.81211853027344,-316,-268,-316,-268,-668.6999999999998,-265,-668.6999999999998,-255,-668.6999999999998]},
+            {"from":-23, "to":-5, "fromPort":"B", "toPort":"T", "points":[-380,-1033.7,-380,-1023.7,-380,-859.3499999999999,-167.24156188964844,-859.3499999999999,-167.24156188964844,-694.9999999999998,-167.24156188964844,-684.9999999999998]},
+            {"from":-24, "to":-5, "fromPort":"B", "toPort":"T", "points":[40,-993.6999999999997,40,-983.6999999999997,40,-839.3499999999997,-167.24156188964844,-839.3499999999997,-167.24156188964844,-694.9999999999998,-167.24156188964844,-684.9999999999998]},
+            {"from":-17, "to":-5, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-869.3500000000001,-167.24156188964844,-869.3500000000001,-167.24156188964844,-694.9999999999998,-167.24156188964844,-684.9999999999998]},
+            {"from":-5, "to":-25, "fromPort":"R", "toPort":"L", "points":[-79.48312377929688,-668.6999999999998,-69.48312377929688,-668.6999999999998,73.58895874023438,-668.6999999999998,73.58895874023438,-690,216.66104125976562,-690,226.66104125976562,-690]},
+            {"from":-5, "to":-26, "fromPort":"R", "toPort":"L", "points":[-79.48312377929688,-668.6999999999998,-69.48312377929688,-668.6999999999998,83.58895874023438,-668.6999999999998,83.58895874023438,-610,236.66104125976562,-610,246.66104125976562,-610]},
+            {"from":-5, "to":-28, "fromPort":"R", "toPort":"L", "points":[-79.48312377929688,-668.6999999999998,-69.48312377929688,-668.6999999999998,81.06211853027344,-668.6999999999998,81.06211853027344,-550,231.60736083984375,-550,241.60736083984375,-550]},
+            {"from":-5, "to":-27, "fromPort":"R", "toPort":"L", "points":[-79.48312377929688,-668.6999999999998,-69.48312377929688,-668.6999999999998,86.11579895019531,-668.6999999999998,86.11579895019531,-370,241.7147216796875,-370,251.7147216796875,-370]},
+            {"from":-5, "to":-29, "fromPort":"R", "toPort":"L", "points":[-79.48312377929688,-668.6999999999998,-69.48312377929688,-668.6999999999998,103.58895874023438,-668.6999999999998,103.58895874023438,-490,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-30, "to":-4, "fromPort":"R", "toPort":"L", "points":[-639.1878814697266,-530,-629.1878814697266,-530,-423.35736083984375,-530,-423.35736083984375,-748.7000000000002,-217.52684020996094,-748.7000000000002,-207.52684020996094,-748.7000000000002]},
+            {"from":-21, "to":-8, "fromPort":"B", "toPort":"T", "points":[220,-733.6999999999999,220,-723.6999999999999,220,-659.3500000000001,-147.24156188964844,-659.3500000000001,-147.24156188964844,-595.0000000000002,-147.24156188964844,-585.0000000000002]},
+            {"from":-31, "to":-8, "fromPort":"R", "toPort":"L", "points":[-661.6073608398438,-410,-651.6073608398438,-410,-437.0939407348633,-410,-437.0939407348633,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-32, "to":-8, "fromPort":"R", "toPort":"L", "points":[-661.6073608398438,-350,-651.6073608398438,-350,-437.0939407348633,-350,-437.0939407348633,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-34, "to":-8, "fromPort":"R", "toPort":"L", "points":[13.338958740234375,-190,23.338958740234375,-190,23.338958740234375,-190,23.338958740234375,-220,-268,-220,-268,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-33, "to":-8, "fromPort":"R", "toPort":"L", "points":[-514.1342010498047,-250,-504.1342010498047,-250,-363.35736083984375,-250,-363.35736083984375,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-13, "to":-8, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-430.45130157470686,-668.7000000000007,-430.45130157470686,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-14, "to":-8, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-430.4513015747072,-608.7000000000007,-430.4513015747072,-568.7000000000003,-222.5805206298828,-568.7000000000003,-212.5805206298828,-568.7000000000003]},
+            {"from":-17, "to":-8, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-819.3500000000004,-147.24156188964844,-819.3500000000004,-147.24156188964844,-595.0000000000002,-147.24156188964844,-585.0000000000002]},
+            {"from":-35, "to":-8, "fromPort":"B", "toPort":"T", "points":[-320,-1173.7,-320,-1163.7,-320,-879.3500000000001,-147.24156188964844,-879.3500000000001,-147.24156188964844,-595.0000000000002,-147.24156188964844,-585.0000000000002]},
+            {"from":-23, "to":-8, "fromPort":"B", "toPort":"T", "points":[-380,-1033.7,-380,-1023.7,-380,-809.3500000000001,-147.24156188964844,-809.3500000000001,-147.24156188964844,-595.0000000000002,-147.24156188964844,-585.0000000000002]},
+            {"from":-8, "to":-28, "fromPort":"R", "toPort":"L", "points":[-81.90260314941406,-568.7000000000003,-71.90260314941406,-568.7000000000003,-68,-568.7000000000003,-68,-668,52,-668,52,-550,231.60736083984375,-550,241.60736083984375,-550]},
+            {"from":-21, "to":-6, "fromPort":"B", "toPort":"T", "points":[220,-733.6999999999999,220,-723.6999999999999,220,-609.3500000000001,-87.24156188964844,-609.3500000000001,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-36, "to":-6, "fromPort":"B", "toPort":"T", "points":[280,-413.7,280,-403.7,109.85237884521484,-403.7,109.85237884521484,-495.0000000000002,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-8, "to":-36, "fromPort":"R", "toPort":"L", "points":[-81.90260314941406,-568.7000000000003,-71.90260314941406,-568.7000000000003,-68,-568.7000000000003,-68,-668,52,-668,52,-430,216.66104125976562,-430,226.66104125976562,-430]},
+            {"from":-8, "to":-27, "fromPort":"R", "toPort":"L", "points":[-81.90260314941406,-568.7000000000003,-71.90260314941406,-568.7000000000003,-68,-568.7000000000003,-68,-668,52,-668,52,-370,241.7147216796875,-370,251.7147216796875,-370]},
+            {"from":-8, "to":-29, "fromPort":"R", "toPort":"L", "points":[-81.90260314941406,-568.7000000000003,-71.90260314941406,-568.7000000000003,-68,-568.7000000000003,-68,-668,52,-668,52,-490,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-28, "to":-6, "fromPort":"B", "toPort":"T", "points":[280,-533.6999999999999,280,-523.6999999999999,280,-509.3500000000001,-87.24156188964844,-509.3500000000001,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-13, "to":-6, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-407.9244613647459,-668.7000000000007,-407.9244613647459,-468.7000000000002,-177.52684020996094,-468.7000000000002,-167.52684020996094,-468.7000000000002]},
+            {"from":-14, "to":-6, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-407.92446136474626,-608.7000000000007,-407.92446136474626,-468.7000000000002,-177.52684020996094,-468.7000000000002,-167.52684020996094,-468.7000000000002]},
+            {"from":-17, "to":-6, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-769.3500000000004,-87.24156188964844,-769.3500000000004,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-24, "to":-6, "fromPort":"B", "toPort":"T", "points":[40,-993.6999999999997,40,-983.6999999999997,40,-739.3499999999999,-87.24156188964844,-739.3499999999999,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-37, "to":-6, "fromPort":"B", "toPort":"T", "points":[-220,-1093.7,-220,-1083.7,-220,-789.3500000000001,-87.24156188964844,-789.3500000000001,-87.24156188964844,-495.0000000000002,-87.24156188964844,-485.0000000000002]},
+            {"from":-6, "to":-22, "fromPort":"R", "toPort":"L", "points":[-6.9562835693359375,-468.7000000000002,3.0437164306640625,-468.7000000000002,106.11579895019531,-468.7000000000002,106.11579895019531,-290,209.18788146972656,-290,219.18788146972656,-290]},
+            {"from":-6, "to":-27, "fromPort":"R", "toPort":"L", "points":[-6.9562835693359375,-468.7000000000002,3.0437164306640625,-468.7000000000002,122.37921905517578,-468.7000000000002,122.37921905517578,-370,241.7147216796875,-370,251.7147216796875,-370]},
+            {"from":-6, "to":-29, "fromPort":"R", "toPort":"L", "points":[-6.9562835693359375,-468.7000000000002,3.0437164306640625,-468.7000000000002,139.85237884521484,-468.7000000000002,139.85237884521484,-490,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-21, "to":-7, "fromPort":"B", "toPort":"T", "points":[220,-733.6999999999999,220,-723.6999999999999,220,-724,220,-724,220,-668,-67.24156188964844,-668,-67.24156188964844,-395.0000000000001,-67.24156188964844,-385.0000000000001]},
+            {"from":-38, "to":-7, "fromPort":"R", "toPort":"L", "points":[-184.24156188964844,-190,-174.24156188964844,-190,-172,-190,-172,-220,-268,-220,-268,-368.7000000000001,-150.05368041992188,-368.7000000000001,-140.05368041992188,-368.7000000000001]},
+            {"from":-14, "to":-7, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-394.18788146972673,-608.7000000000007,-394.18788146972673,-368.7000000000001,-150.05368041992188,-368.7000000000001,-140.05368041992188,-368.7000000000001]},
+            {"from":-17, "to":-7, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1044,-600.0000000000002,-1044,-600.0000000000002,-980,52,-980,52,-668,-67.24156188964844,-668,-67.24156188964844,-395.0000000000001,-67.24156188964844,-385.0000000000001]},
+            {"from":-35, "to":-7, "fromPort":"B", "toPort":"T", "points":[-320,-1173.7,-320,-1163.7,-320,-1163.7,-300,-1163.7,-300,-980,52,-980,52,-668,-67.24156188964844,-668,-67.24156188964844,-395.0000000000001,-67.24156188964844,-385.0000000000001]},
+            {"from":-24, "to":-7, "fromPort":"B", "toPort":"T", "points":[40,-993.6999999999997,40,-983.6999999999997,40,-980,52,-980,52,-668,-67.24156188964844,-668,-67.24156188964844,-395.0000000000001,-67.24156188964844,-385.0000000000001]},
+            {"from":-7, "to":-39, "fromPort":"R", "toPort":"L", "points":[5.570556640625,-368.7000000000001,15.570556640625,-368.7000000000001,101.16947937011719,-368.7000000000001,101.16947937011719,-210,186.76840209960938,-210,196.76840209960938,-210]},
+            {"from":-7, "to":-40, "fromPort":"R", "toPort":"L", "points":[5.570556640625,-368.7000000000001,15.570556640625,-368.7000000000001,12,-368.7000000000001,12,-368.7000000000001,52,-368.7000000000001,52,-170,421.7147216796875,-170,431.7147216796875,-170]},
+            {"from":-21, "to":-41, "fromPort":"R", "toPort":"L", "points":[273.3389587402344,-750,283.3389587402344,-750,284,-750,284,-876,588,-876,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-20, "to":-41, "fromPort":"R", "toPort":"L", "points":[258.39263916015625,-850,268.39263916015625,-850,268.39263916015625,-850,268.39263916015625,-876,588,-876,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-13, "to":-41, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-636,-668.7000000000007,-636,-668.7000000000007,-596,-668.7000000000007,-596,-956,588,-956,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-14, "to":-41, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-636,-608.7000000000007,-636,-608.7000000000007,-596,-608.7000000000007,-596,-956,588,-956,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-17, "to":-41, "fromPort":"B", "toPort":"L", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1044,-600.0000000000002,-1044,-600.0000000000002,-980,588,-980,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-24, "to":-41, "fromPort":"B", "toPort":"L", "points":[40,-993.6999999999997,40,-983.6999999999997,40,-980,588,-980,588,-908.7,695,-908.7,705,-908.7]},
+            {"from":-41, "to":-48, "fromPort":"R", "toPort":"L", "points":[835.6779174804688,-908.7,845.6779174804688,-908.7,981.1694793701172,-908.7,981.1694793701172,-910,1116.6610412597656,-910,1126.6610412597656,-910]},
+            {"from":-41, "to":-49, "fromPort":"R", "toPort":"L", "points":[835.6779174804688,-908.7,845.6779174804688,-908.7,1011.1694793701172,-908.7,1011.1694793701172,-830,1176.6610412597656,-830,1186.6610412597656,-830]},
+            {"from":-48, "to":-42, "fromPort":"B", "toPort":"L", "points":[1180,-893.6999999999999,1180,-883.6999999999999,1180,-848.9999999999998,799.607360839844,-848.9999999999998,799.607360839844,-789.9999999999997,809.607360839844,-789.9999999999997]},
+            {"from":-49, "to":-42, "fromPort":"B", "toPort":"L", "points":[1240,-813.6999999999999,1240,-803.6999999999999,1240,-765.6999999999996,799.607360839844,-765.6999999999996,799.607360839844,-789.9999999999997,809.607360839844,-789.9999999999997]},
+            {"from":-50, "to":-42, "fromPort":"R", "toPort":"L", "points":[580.8121185302734,-930,590.8121185302734,-930,695.2097396850587,-930,695.2097396850587,-789.9999999999997,799.607360839844,-789.9999999999997,809.607360839844,-789.9999999999997]},
+            {"from":-51, "to":-42, "fromPort":"R", "toPort":"L", "points":[593.3389587402344,-850,603.3389587402344,-850,701.4731597900392,-850,701.4731597900392,-789.9999999999997,799.607360839844,-789.9999999999997,809.607360839844,-789.9999999999997]},
+            {"from":-20, "to":-42, "fromPort":"R", "toPort":"L", "points":[258.39263916015625,-850,268.39263916015625,-850,534.0000000000001,-850,534.0000000000001,-789.9999999999997,799.607360839844,-789.9999999999997,809.607360839844,-789.9999999999997]},
+            {"from":-57, "to":-42, "fromPort":"B", "toPort":"T", "points":[280,-1193.7,280,-1183.7,280,-1180,280,-1180,280,-1164,860.0000000000002,-1164,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-56, "to":-42, "fromPort":"B", "toPort":"T", "points":[440,-1193.7,440,-1183.7,440,-1180,440,-1180,440,-1164,860.0000000000002,-1164,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-55, "to":-42, "fromPort":"B", "toPort":"T", "points":[580,-1193.7,580,-1183.7,580,-999.9999999999998,860.0000000000002,-999.9999999999998,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-54, "to":-42, "fromPort":"B", "toPort":"T", "points":[-20,-1093.6999999999998,-20,-1083.6999999999998,-20,-1084,-20,-1084,-20,-1060,860.0000000000002,-1060,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-53, "to":-42, "fromPort":"B", "toPort":"T", "points":[500,-1093.7,500,-1083.7,500,-1084,500,-1084,500,-1060,860.0000000000002,-1060,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-59, "to":-42, "fromPort":"B", "toPort":"T", "points":[640,-1093.7,640,-1083.7,640,-949.9999999999998,860.0000000000002,-949.9999999999998,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-52, "to":-42, "fromPort":"B", "toPort":"T", "points":[720,-1173.7,720,-1163.7,720,-989.9999999999998,860.0000000000002,-989.9999999999998,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-58, "to":-42, "fromPort":"B", "toPort":"T", "points":[780,-1073.7,780,-1063.7,780,-1060,860.0000000000002,-1060,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-62, "to":-42, "fromPort":"B", "toPort":"T", "points":[900,-1173.7,900,-1163.7,900,-1163.7,860.0000000000002,-1163.7,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-60, "to":-42, "fromPort":"B", "toPort":"T", "points":[920,-1073.7,920,-1063.7,920,-1060,860.0000000000002,-1060,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-61, "to":-42, "fromPort":"B", "toPort":"T", "points":[1000,-1173.7,1000,-1163.7,1000,-989.9999999999998,860.0000000000002,-989.9999999999998,860.0000000000002,-816.2999999999996,860.0000000000002,-806.2999999999996]},
+            {"from":-42, "to":-63, "fromPort":"R", "toPort":"L", "points":[910.3926391601565,-789.9999999999997,920.3926391601565,-789.9999999999997,1026,-789.9999999999997,1026,-750,1131.6073608398438,-750,1141.6073608398438,-750]},
+            {"from":-42, "to":-64, "fromPort":"R", "toPort":"L", "points":[910.3926391601565,-789.9999999999997,920.3926391601565,-789.9999999999997,924,-789.9999999999997,924,-789.9999999999997,940,-789.9999999999997,940,-948,1004,-948,1004,-670,1136.6610412597656,-670,1146.6610412597656,-670]},
+            {"from":-48, "to":-44, "fromPort":"B", "toPort":"L", "points":[1180,-893.6999999999999,1180,-883.6999999999999,1180,-799,879.6073608398438,-799,879.6073608398438,-690.0000000000001,889.6073608398438,-690.0000000000001]},
+            {"from":-20, "to":-44, "fromPort":"R", "toPort":"L", "points":[258.39263916015625,-850,268.39263916015625,-850,574,-850,574,-690.0000000000001,879.6073608398438,-690.0000000000001,889.6073608398438,-690.0000000000001]},
+            {"from":-14, "to":-44, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-636,-608.7000000000007,-636,-608.7000000000007,-596,-608.7000000000007,-596,-868,156,-868,156,-820,340,-820,340,-690.0000000000001,879.6073608398438,-690.0000000000001,889.6073608398438,-690.0000000000001]},
+            {"from":-63, "to":-44, "fromPort":"B", "toPort":"L", "points":[1180,-733.6999999999999,1180,-723.6999999999999,1180,-719,879.6073608398438,-719,879.6073608398438,-690.0000000000001,889.6073608398438,-690.0000000000001]},
+            {"from":-44, "to":-65, "fromPort":"R", "toPort":"L", "points":[990.3926391601562,-690.0000000000001,1000.3926391601562,-690.0000000000001,1074.7902603149414,-690.0000000000001,1074.7902603149414,-610,1149.1878814697266,-610,1159.1878814697266,-610]},
+            {"from":-44, "to":-27, "fromPort":"R", "toPort":"L", "points":[990.3926391601562,-690.0000000000001,1000.3926391601562,-690.0000000000001,1004,-690.0000000000001,1004,-690.0000000000001,1028,-690.0000000000001,1028,-340,244,-340,244,-370,241.7147216796875,-370,251.7147216796875,-370]},
+            {"from":-48, "to":-43, "fromPort":"B", "toPort":"L", "points":[1180,-893.6999999999999,1180,-883.6999999999999,1180,-759,877.0536804199218,-759,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-65, "to":-43, "fromPort":"B", "toPort":"L", "points":[1220,-593.6999999999999,1220,-583.6999999999999,877.0536804199218,-583.6999999999999,877.0536804199218,-596.8499999999999,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-17, "to":-44, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1044,-600.0000000000002,-1044,-600.0000000000002,-980,940,-980,940,-716.3000000000001,940,-706.3000000000001]},
+            {"from":-66, "to":-44, "fromPort":"B", "toPort":"T", "points":[199.99999999999977,-1073.7000000000003,199.99999999999977,-1063.7000000000003,199.99999999999977,-1060,940,-1060,940,-716.3000000000001,940,-706.3000000000001]},
+            {"from":-67, "to":-44, "fromPort":"B", "toPort":"T", "points":[59.999999999999545,-1193.6999999999998,59.999999999999545,-1183.6999999999998,59.999999999999545,-1180,59.999999999999545,-1180,59.999999999999545,-1060,940,-1060,940,-716.3000000000001,940,-706.3000000000001]},
+            {"from":-55, "to":-44, "fromPort":"B", "toPort":"T", "points":[580,-1193.7,580,-1183.7,580,-1180,580,-1180,580,-1060,940,-1060,940,-716.3000000000001,940,-706.3000000000001]},
+            {"from":-63, "to":-43, "fromPort":"B", "toPort":"L", "points":[1180,-733.6999999999999,1180,-723.6999999999999,1180,-679,877.0536804199218,-679,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-13, "to":-43, "fromPort":"R", "toPort":"L", "points":[-648.3220825195309,-668.7000000000007,-638.3220825195309,-668.7000000000007,-636,-668.7000000000007,-636,-668.7000000000007,-596,-668.7000000000007,-596,-868,156,-868,156,-820,364,-820,364,-610,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-14, "to":-43, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-636,-608.7000000000007,-636,-608.7000000000007,-596,-608.7000000000007,-596,-868,156,-868,156,-820,364,-820,364,-610,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-17, "to":-43, "fromPort":"B", "toPort":"L", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1044,-600.0000000000002,-1044,-600.0000000000002,-980,364,-980,364,-610,877.0536804199218,-610,887.0536804199218,-610]},
+            {"from":-68, "to":-43, "fromPort":"B", "toPort":"T", "points":[1079.9999999999995,-1093.6999999999998,1079.9999999999995,-1083.6999999999998,1079.9999999999995,-1084,1079.9999999999995,-1084,1079.9999999999995,-1060,939.9999999999999,-1060,939.9999999999999,-636.3,939.9999999999999,-626.3]},
+            {"from":-17, "to":-43, "fromPort":"B", "toPort":"T", "points":[-600.0000000000002,-1053.7000000000005,-600.0000000000002,-1043.7000000000005,-600.0000000000002,-1036,-600.0000000000002,-1036,-600.0000000000002,-980,939.9999999999999,-980,939.9999999999999,-636.3,939.9999999999999,-626.3]},
+            {"from":-43, "to":-69, "fromPort":"R", "toPort":"L", "points":[992.946319580078,-610,1002.946319580078,-610,1077.276840209961,-610,1077.276840209961,-550,1151.6073608398438,-550,1161.6073608398438,-550]},
+            {"from":-43, "to":-29, "fromPort":"R", "toPort":"L", "points":[992.946319580078,-610,1002.946319580078,-610,1004,-610,1004,-610,1028,-610,1028,-356,436,-356,436,-460,276,-460,276,-490,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-21, "to":-45, "fromPort":"R", "toPort":"L", "points":[273.3389587402344,-750,283.3389587402344,-750,284,-750,284,-750,404,-750,404,-510,899.6073608398435,-510,909.6073608398435,-510]},
+            {"from":-63, "to":-45, "fromPort":"B", "toPort":"L", "points":[1180,-733.6999999999999,1180,-723.6999999999999,1180,-723.6999999999999,1140,-723.6999999999999,1140,-356,692,-356,692,-510,899.6073608398435,-510,909.6073608398435,-510]},
+            {"from":-64, "to":-45, "fromPort":"B", "toPort":"L", "points":[1200,-653.6999999999999,1200,-643.6999999999999,1200,-643.6999999999999,1148,-643.6999999999999,1148,-356,692,-356,692,-510,899.6073608398435,-510,909.6073608398435,-510]},
+            {"from":-70, "to":-45, "fromPort":"R", "toPort":"L", "points":[595.7584381103516,-470,605.7584381103516,-470,605.7584381103516,-470,605.7584381103516,-510,899.6073608398435,-510,909.6073608398435,-510]},
+            {"from":-26, "to":-45, "fromPort":"R", "toPort":"L", "points":[353.3389587402344,-610,363.3389587402344,-610,631.473159790039,-610,631.473159790039,-510,899.6073608398435,-510,909.6073608398435,-510]},
+            {"from":-71, "to":-45, "fromPort":"R", "toPort":"T", "points":[343.4463195800781,-1110,353.4463195800781,-1110,356,-1110,356,-1060,959.9999999999998,-1060,959.9999999999998,-536.3,959.9999999999998,-526.3]},
+            {"from":-53, "to":-45, "fromPort":"R", "toPort":"T", "points":[553.3389587402344,-1110,563.3389587402344,-1110,564,-1110,564,-1060,959.9999999999998,-1060,959.9999999999998,-536.3,959.9999999999998,-526.3]},
+            {"from":-45, "to":-38, "fromPort":"R", "toPort":"L", "points":[1010.392639160156,-510,1020.392639160156,-510,1020,-510,1020,-510,1028,-510,1028,-380,420,-380,420,-164,-348,-164,-348,-190,-345.75843811035156,-190,-335.75843811035156,-190]},
+            {"from":-45, "to":-28, "fromPort":"R", "toPort":"L", "points":[1010.392639160156,-510,1020.392639160156,-510,1020,-510,1020,-510,1028,-510,1028,-356,436,-356,436,-460,228,-460,228,-550,231.60736083984375,-550,241.60736083984375,-550]},
+            {"from":-45, "to":-34, "fromPort":"R", "toPort":"L", "points":[1010.392639160156,-510,1020.392639160156,-510,1028,-510,1028,-380,420,-380,420,-164,-100,-164,-100,-190,-103.33895874023438,-190,-93.33895874023438,-190]},
+            {"from":-45, "to":-29, "fromPort":"R", "toPort":"L", "points":[1010.392639160156,-510,1020.392639160156,-510,1020,-510,1020,-510,1028,-510,1028,-356,436,-356,436,-460,276,-460,276,-490,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-21, "to":-46, "fromPort":"R", "toPort":"L", "points":[273.3389587402344,-750,283.3389587402344,-750,284,-750,284,-750,404,-750,404,-409.99999999999994,799.6073608398435,-409.99999999999994,809.6073608398435,-409.99999999999994]},
+            {"from":-63, "to":-46, "fromPort":"B", "toPort":"L", "points":[1180,-733.6999999999999,1180,-723.6999999999999,1180,-723.6999999999999,1140,-723.6999999999999,1140,-380,692,-380,692,-409.99999999999994,799.6073608398435,-409.99999999999994,809.6073608398435,-409.99999999999994]},
+            {"from":-64, "to":-46, "fromPort":"B", "toPort":"L", "points":[1200,-653.6999999999999,1200,-643.6999999999999,1200,-643.6999999999999,1148,-643.6999999999999,1148,-380,692,-380,692,-409.99999999999994,799.6073608398435,-409.99999999999994,809.6073608398435,-409.99999999999994]},
+            {"from":-26, "to":-46, "fromPort":"R", "toPort":"L", "points":[353.3389587402344,-610,363.3389587402344,-610,364,-610,364,-610,404,-610,404,-409.99999999999994,799.6073608398435,-409.99999999999994,809.6073608398435,-409.99999999999994]},
+            {"from":-14, "to":-46, "fromPort":"R", "toPort":"L", "points":[-648.3220825195316,-608.7000000000007,-638.3220825195316,-608.7000000000007,-636,-608.7000000000007,-636,-608.7000000000007,-628,-608.7000000000007,-628,-340,52,-340,52,-396,340,-396,340,-409.99999999999994,799.6073608398435,-409.99999999999994,809.6073608398435,-409.99999999999994]},
+            {"from":-72, "to":-46, "fromPort":"B", "toPort":"T", "points":[1160.0000000000002,-1173.7,1160.0000000000002,-1163.7,1160.0000000000002,-1163.7,859.9999999999998,-1163.7,859.9999999999998,-436.29999999999995,859.9999999999998,-426.29999999999995]},
+            {"from":-46, "to":-34, "fromPort":"R", "toPort":"L", "points":[910.392639160156,-409.99999999999994,920.392639160156,-409.99999999999994,920.392639160156,-300,-103.33895874023438,-300,-103.33895874023438,-190,-93.33895874023438,-190]},
+            {"from":-46, "to":-28, "fromPort":"R", "toPort":"L", "points":[910.392639160156,-409.99999999999994,920.392639160156,-409.99999999999994,920.392639160156,-479.99999999999994,231.60736083984375,-479.99999999999994,231.60736083984375,-550,241.60736083984375,-550]},
+            {"from":-46, "to":-27, "fromPort":"R", "toPort":"L", "points":[910.392639160156,-409.99999999999994,920.392639160156,-409.99999999999994,920.392639160156,-345.7,241.7147216796875,-345.7,241.7147216796875,-370,251.7147216796875,-370]},
+            {"from":-46, "to":-29, "fromPort":"R", "toPort":"L", "points":[910.392639160156,-409.99999999999994,920.392639160156,-409.99999999999994,920.392639160156,-449.99999999999994,276.6610412597656,-449.99999999999994,276.6610412597656,-490,286.6610412597656,-490]},
+            {"from":-46, "to":-40, "fromPort":"R", "toPort":"L", "points":[910.392639160156,-409.99999999999994,920.392639160156,-409.99999999999994,920.392639160156,-290,421.7147216796875,-290,421.7147216796875,-170,431.7147216796875,-170]}
+            ]}
+        </textarea>
+    </div>
+</body>
+</html>
