@@ -17,6 +17,7 @@
         <span style="display: -webkit-box; height: 40px;">
             <input type="text" id="searchText"/>
             <button onclick="search()">检索</button>
+            <label id="index">0</label> of <label id="count">0</label>
         </span>
         <div style="width:100%; white-space:nowrap;">
             <span style="display: none; vertical-align: top; padding: 5px; width:100px">
@@ -26,18 +27,19 @@
                 <div id="myDiagramDiv" style="border: solid 1px gray; height: 720px"></div>
             </span>
         </div>
-        <div style="width:100%; white-space:nowrap;">
-            <span style="vertical-align: top; padding: 5px; width:100px">
-                <div id="myDiagramDivSmall" style="border: solid 1px gray; height: 500px; width: 60%;"></div>
+        <div style="width: 1000px; height: 500px; white-space: nowrap; display: -webkit-box;">
+            <div style="width: 700px; height: 100%; border: solid 1px gray; display: -webkit-box;" id="myDiagramDivSmall"></div>
+            <div>
                 <div>
                     <button id="savebutton" onclick="save()">保存</button>
                     <button onclick="load()">加载</button>
                     diagram model saved in json format:
                 </div>
-            </span>
-            <span style="display: inline-block; vertical-align: top; padding: 5px; width: 80%; background-color: #a4a4a4;">
-                <textarea id="mySavedModel" style="width:100%;height:300px"></textarea>
-            </span>
+                <div style="width: 1100px;height: 470px;display: block;">
+                    <textarea id="mySavedModel" style="width: 100%; height: 100%; display: -webkit-box; "></textarea>
+                </div>
+            </div>
+            
         </div>
 
     </div>

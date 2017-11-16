@@ -432,7 +432,18 @@ function search() {
     if (!myDiagram) return;
 
     var text = jQuery("#searchText").val().trim();
-    if (!text) return;
+    if (!text) {
+        searchText = null;
+        nodeDatas = [];
+
+        index = 0;
+        count = 0;
+
+        jQuery("#index").html(index + 1);
+        jQuery("#count").html(count);
+
+        return;
+    }
 
     if (text !== searchText) {
         searchText = text;
@@ -461,6 +472,9 @@ function search() {
             index = 0;
         }
     }
+
+    jQuery("#index").html(index + 1);
+    jQuery("#count").html(count);
 
     if (index >= 0) {
         var currentData = nodeDatas[index];
