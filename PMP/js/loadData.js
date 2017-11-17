@@ -439,8 +439,10 @@ function search() {
         index = 0;
         count = 0;
 
-        jQuery("#index").html(index + 1);
+        jQuery("#index").html(index);
         jQuery("#count").html(count);
+
+        myDiagram.clearSelection();
 
         return;
     }
@@ -449,18 +451,38 @@ function search() {
         searchText = text;
         nodeDatas = [];
 
-        var nodeDataArray = myDiagram.model.nodeDataArray;
-        var length = nodeDataArray.length;
+        var nodes = myDiagram.nodes;
+        while (nodes.next()) {
+            var node = nodes.value;
+            var data = node.data;
+
+            if (!(node instanceof go.Group) && data.text.indexOf(searchText) >= 0) {
+                nodeDatas.push(data);
+            }
+        }
 
         for (var i = 0; i < length; i++) {
-            var data = nodeDataArray[i];
+            var data = nodes[i];
 
             if (data.text.indexOf(searchText) >= 0) {
                 nodeDatas.push(data);
             }
         }
 
-        if (nodeDatas.length === 0) return;
+        if (nodeDatas.length === 0) {
+            searchText = null;
+            nodeDatas = [];
+
+            index = 0;
+            count = 0;
+
+            jQuery("#index").html(index);
+            jQuery("#count").html(count);
+
+            myDiagram.clearSelection();
+
+            return;
+        }
 
         count = nodeDatas.length;
         index = 0;
