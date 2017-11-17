@@ -451,20 +451,13 @@ function search() {
         searchText = text;
         nodeDatas = [];
 
-        var nodes = myDiagram.nodes;
-        while (nodes.next()) {
-            var node = nodes.value;
-            var data = node.data;
-
-            if (!(node instanceof go.Group) && data.text.indexOf(searchText) >= 0) {
-                nodeDatas.push(data);
-            }
-        }
+        var nodeDataArray = myDiagram.model.nodeDataArray;
+        var length = nodeDataArray.length;
 
         for (var i = 0; i < length; i++) {
-            var data = nodes[i];
+            var data = nodeDataArray[i];
 
-            if (data.text.indexOf(searchText) >= 0) {
+            if (!data.isGroup && data.text.indexOf(searchText) >= 0) {
                 nodeDatas.push(data);
             }
         }
