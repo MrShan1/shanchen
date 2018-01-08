@@ -3,6 +3,10 @@
 (function () {
     //简化定义模板，避免使用$（与jQuery冲突）
     var $$ = go.GraphObject.make;
+    var Consts = {
+        BUFFER_HEIGHT: 60,
+        BUFFER_WIDTH: 70,
+    };
 
     //#region 时序图工具
 
@@ -19,7 +23,7 @@
 
         // 创建可视化视图
         this.createDiagram(containerId);
-    }
+    };
 
     /**
     * 主视图 {go.Diagram}
@@ -195,7 +199,10 @@
         this.initializeTimeLine();
 
         // 添加调整大小监听事件
-        this.diagram.addDiagramListener("PartResized", this.listenPartResized);
+        this.diagram.addDiagramListener("InitialLayoutCompleted", this.updateViewBounds);
+
+        // 添加调整大小监听事件
+        this.diagram.addDiagramListener("PartResized", this.updateViewBounds);
 
         // 添加选中元素移动监听事件
         this.diagram.addDiagramListener("SelectionMoved", this.listenViewportBoundsChanged);
@@ -487,19 +494,12 @@
         if (!event || !event.diagram) return;
 
         var diagram = event.diagram;
-        var timeline = diagram.timeline;
         var model = diagram.model;
         var vb = diagram.viewportBounds;
 
         diagram.startTransaction("update scales");
 
-        // Update properties of horizontal scale to reflect viewport
-        //timeline.location = new go.Point(vb.x, vb.y + 100);
-        //timeline.graduatedMin = vb.x;
-        //timeline.graduatedMax = vb.x + vb.width;
-        //timeline.elt(0).width = vb.width;
-
-        model.setDataProperty(model.modelData, "viewPoint", new go.Point(0, vb.y));
+        model.setDataProperty(model.modelData, "viewPoint", new go.Point(vb.x, vb.y));
 
         diagram.commitTransaction("update scales");
     };
@@ -589,6 +589,16 @@
         model.setDataProperty(model.modelData, "startDateTime", this.startDateTime);
         // 设置模型数据的结束时间
         model.setDataProperty(model.modelData, "endDateTime", this.endDateTime);
+    };
+
+    TimeSequenceTool.prototype.updateViewBounds = function (event) {
+        if (!event || !event.diagram) return;
+
+        var diagram = event.diagram;
+        var bounds = diagram.computePartsBounds(diagram.nodes);
+
+        diagram.fixedBounds = new go.Rect(bounds.x, bounds.y - ts.Consts.BUFFER_HEIGHT,
+            bounds.width, bounds.height + ts.Consts.BUFFER_HEIGHT);
     };
 
     /**
@@ -767,16 +777,11 @@
         return visible;
     };
 
-    TemplateManager.prototype.convertMLocationByViewPoint = function (data) {
-        return new go.Point(data.x, data.y + 20);
-    };
-
     TemplateManager.prototype.convertTLocationByViewPoint = function (data) {
-        return new go.Point(data.x + 20, data.y + 60);
-    };
+        var height = ts.Consts.BUFFER_HEIGHT;
+        var width = ts.Consts.BUFFER_WIDTH;
 
-    TemplateManager.prototype.convertGLocationByViewPoint = function (data) {
-        //return new go.Point(data.x, data.y + 60);
+        return new go.Point(width, data.y + height);
     };
 
     /**
@@ -1019,9 +1024,9 @@
                                 wrappingColumn: 1
                             }
                         ),
-                    location: new go.Point(20, 60),
-                    maxLocation: new go.Point(20, Infinity),
-                    minLocation: new go.Point(20, -Infinity),
+                    location: new go.Point(0, ts.Consts.BUFFER_HEIGHT),
+                    maxLocation: new go.Point(0, Infinity),
+                    minLocation: new go.Point(0, -Infinity),
                     //movable: false,
                     //selectable: false,
                     selectionAdorned: false,
@@ -1345,6 +1350,7 @@
     }
 
     window.ts = {
+        Consts: Consts,
         CustomLink: CustomLink,
         TemplateManager: TemplateManager,
         TimeSequenceTool: TimeSequenceTool,
