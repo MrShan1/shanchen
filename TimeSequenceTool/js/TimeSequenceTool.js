@@ -147,11 +147,17 @@
         diagram.allowDelete = false; // 禁止删除功能
         diagram.animationManager.isEnabled = true; // 允许动画效果
         diagram.contentAlignment = go.Spot.TopLeft; // 设置内容对齐方式为左上
+        //diagram.grid.visible = true;
         diagram.groupTemplate = this.templateManager.groupTemplate; // 设置视图的组织模板
         diagram.linkTemplate = this.templateManager.linkTemplate; // 设置视图的链接模板
         diagram.model = new go.GraphLinksModel(); // 设置视图的数据模型
         diagram.nodeTemplate = this.templateManager.nodeTemplate; // 设置视图的节点模板
+        //diagram.toolManager.draggingTool.gridSnapCellSize = new go.Size(1, 5);
+        //diagram.toolManager.draggingTool.isGridSnapEnabled = true;
+        //diagram.toolManager.resizingTool.isGridSnapEnabled = true;
+        //diagram.scrollMode = go.Diagram.InfiniteScroll;
         diagram.toolManager.resizingTool.maxSize = new go.Size(NaN, NaN); // 设置调整大小工具的最大值
+        diagram.toolManager.resizingTool.maxSize = new go.Size(NaN, NaN);
         diagram.undoManager.isEnabled = true; // 允许撤销\恢复操作记录
 
         //diagram.commandHandler.doKeyDown = function () {
@@ -190,6 +196,9 @@
 
         // 添加调整大小监听事件
         this.diagram.addDiagramListener("PartResized", this.listenPartResized);
+
+        // 添加选中元素移动监听事件
+        this.diagram.addDiagramListener("SelectionMoved", this.listenViewportBoundsChanged);
 
         // 添加视区改变监听事件
         this.diagram.addDiagramListener("ViewportBoundsChanged", this.listenViewportBoundsChanged);
@@ -409,7 +418,7 @@
         modelData.intervalWidth = this.initialIntervalWidth; // 设置初始的单位间距宽度
         modelData.startDateTime = this.startDateTime; // 设置初始的开始时间
         modelData.endDateTime = this.startDateTime; // 设置初始的结束时间
-        modelData.originalPoint = new go.Point(0, 0); // 设置初始的坐标原点
+        modelData.viewPoint = new go.Point(0, 0); // 设置初始的坐标原点
     };
 
     /**
@@ -490,7 +499,7 @@
         //timeline.graduatedMax = vb.x + vb.width;
         //timeline.elt(0).width = vb.width;
 
-        model.setDataProperty(model.modelData, "originalPoint", new go.Point(0, vb.y + 65));
+        model.setDataProperty(model.modelData, "viewPoint", new go.Point(0, vb.y));
 
         diagram.commitTransaction("update scales");
     };
@@ -758,6 +767,18 @@
         return visible;
     };
 
+    TemplateManager.prototype.convertMLocationByViewPoint = function (data) {
+        return new go.Point(data.x, data.y + 20);
+    };
+
+    TemplateManager.prototype.convertTLocationByViewPoint = function (data) {
+        return new go.Point(data.x + 20, data.y + 60);
+    };
+
+    TemplateManager.prototype.convertGLocationByViewPoint = function (data) {
+        //return new go.Point(data.x, data.y + 60);
+    };
+
     /**
     * 用间隔宽度转换刻度(分)的时间间隔
     *
@@ -934,15 +955,17 @@
                     graduatedMax: 10,
                     graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
                     graduatedTickUnit: 1, //刻度间隔单元
+                    //height: 60,
+                    layerName: "Foreground",
                     locationObjectName: "MAIN_LINE",
-                    locationSpot: go.Spot.BottomLeft,
+                    //locationSpot: go.Spot.BottomLeft,
                     movable: false,
                     name: "DATE_LINE",
                     selectionAdorned: false,
                 },
                 new go.Binding("graduatedMax", "endDateTime", this.convertGraduatedByDateTime).ofModel(),
                 new go.Binding("graduatedMin", "startDateTime", this.convertGraduatedByDateTime).ofModel(),
-                new go.Binding("location", "originalPoint").ofModel(),
+                new go.Binding("location", "viewPoint", this.convertTLocationByViewPoint).ofModel(),
                 // 日期线主轴
                 $$(go.Shape, "LineH",
                     {
@@ -988,7 +1011,7 @@
         var template =
             $$(go.Group, "Auto",
                 {
-                    //background: "transparent",
+                    background: "transparent",
                     layout:
                         // 网格布局
                         $$(go.GridLayout,
@@ -996,12 +1019,14 @@
                                 wrappingColumn: 1
                             }
                         ),
-                    location: new go.Point(0, 0),
-                    maxLocation: new go.Point(0, 9999),
-                    minLocation: new go.Point(0, 0),
+                    location: new go.Point(20, 60),
+                    maxLocation: new go.Point(20, Infinity),
+                    minLocation: new go.Point(20, -Infinity),
                     //movable: false,
-                    //selectable: false
+                    //selectable: false,
+                    selectionAdorned: false,
                 },
+                //new go.Binding("location", "originalPoint").ofModel(),
                 $$(go.Placeholder)
             );
 
@@ -1084,8 +1109,8 @@
                     alignment: go.Spot.Left,
                     cursor: "pointer",
                     //locationObjectName: "INFO_PANEL",
-                    maxLocation: new go.Point(0, 9999),
-                    minLocation: new go.Point(0, 0),
+                    maxLocation: new go.Point(0, Infinity),
+                    minLocation: new go.Point(0, -Infinity),
                     selectionObjectName: "PICTURE",
                 },
                 // 主要信息面板
@@ -1149,8 +1174,10 @@
                     graduatedMax: 10,
                     graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
                     graduatedTickUnit: 1, //刻度间隔单元
+                    //height: 60,
+                    layerName: "Foreground",
                     locationObjectName: "MAIN_LINE",
-                    locationSpot: go.Spot.BottomLeft,
+                    //locationSpot: go.Spot.BottomLeft,
                     movable: false,
                     name: "TIME_LINE",
                     resizable: true,
@@ -1173,7 +1200,7 @@
                 },
                 new go.Binding("graduatedMax", "endDateTime", this.convertGraduatedByDateTime).ofModel(),
                 new go.Binding("graduatedMin", "startDateTime", this.convertGraduatedByDateTime).ofModel(),
-                new go.Binding("location", "originalPoint").ofModel(),
+                new go.Binding("location", "viewPoint", this.convertTLocationByViewPoint).ofModel(),
                 // 时间线主轴
                 $$(go.Shape, "LineH",
                     {
