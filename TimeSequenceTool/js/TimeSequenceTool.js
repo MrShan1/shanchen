@@ -1,11 +1,12 @@
 ﻿/// <reference path="go-debug-1.7-test.js" />
 
 (function () {
-    //简化定义模板，避免使用$（与jQuery冲突）
-    var $$ = go.GraphObject.make;
+    var $$ = go.GraphObject.make; //简化定义模板，避免使用$（与jQuery冲突）
     var Consts = {
-        BUFFER_HEIGHT: 60,
-        BUFFER_WIDTH: 70,
+        BUFFER_HEIGHT: 53, // 坐标缓冲高度
+        BUFFER_WIDTH: 0, // 坐标缓冲宽度
+        STANDARD_WIDTH_H: 50, // 小时的标准间隔宽度
+        STANDARD_WIDTH_M: 24, // 分钟的标准间隔宽度
     };
 
     //#region 时序图工具
@@ -59,6 +60,28 @@
     * 模板管理器 {TemplateManager}
     */
     TimeSequenceTool.prototype.templateManager = null;
+
+    /**
+    * 为视图事件添加监听器
+    *
+    * @param eventName {String} 视图事件名称
+    * @param func {Function} 监听函数
+    * @param caller {Object|null} 函数呼出元
+    */
+    TimeSequenceTool.prototype.addDiagramListener = function (eventName, func, caller) {
+        if (!eventName || !func) return;
+
+        var listener = function (event) {
+            if (caller) {
+                func.call(caller);
+            }
+            else {
+                func();
+            }
+        };
+
+        this.diagram.addDiagramListener(eventName, listener);
+    };
 
     /**
     * 将类型集合添加进对应的类型Map中
@@ -149,27 +172,16 @@
 
         diagram.allowCopy = false; // 禁止复制功能
         diagram.allowDelete = false; // 禁止删除功能
-        diagram.animationManager.isEnabled = true; // 允许动画效果
+        diagram.commandHandler.decreaseZoom = this.decreaseTimeLineWidth; // 覆写减小缩放处理
+        diagram.commandHandler.increaseZoom = this.increaseTimeLineWidth; // 覆写增加缩放处理
         diagram.contentAlignment = go.Spot.TopLeft; // 设置内容对齐方式为左上
-        //diagram.grid.visible = true;
-        diagram.groupTemplate = this.templateManager.groupTemplate; // 设置视图的组织模板
+        //diagram.grid.visible = true; // 显示背景网格
+        diagram.layout = $$(go.GridLayout, { wrappingColumn: 1, isOngoing: false }); // 设置视图的布局为网格布局
         diagram.linkTemplate = this.templateManager.linkTemplate; // 设置视图的链接模板
         diagram.model = new go.GraphLinksModel(); // 设置视图的数据模型
         diagram.nodeTemplate = this.templateManager.nodeTemplate; // 设置视图的节点模板
-        //diagram.toolManager.draggingTool.gridSnapCellSize = new go.Size(1, 5);
-        //diagram.toolManager.draggingTool.isGridSnapEnabled = true;
-        //diagram.toolManager.resizingTool.isGridSnapEnabled = true;
-        //diagram.scrollMode = go.Diagram.InfiniteScroll;
         diagram.toolManager.resizingTool.maxSize = new go.Size(NaN, NaN); // 设置调整大小工具的最大值
-        diagram.toolManager.resizingTool.maxSize = new go.Size(NaN, NaN);
-        diagram.undoManager.isEnabled = true; // 允许撤销\恢复操作记录
-
-        //diagram.commandHandler.doKeyDown = function () {
-        //    var e = diagram.lastInput;
-        //    // The meta (Command) key substitutes for "control" for Mac commands
-        //    var control = e.control || e.meta;
-        //    var key = e.key;
-        //};
+        diagram.undoManager.isEnabled = false; // 禁止撤销\恢复操作记录
     };
 
     /**
@@ -183,8 +195,8 @@
         // 创建视图
         this.diagram = new go.Diagram(containerId);
 
-        // 将可视化工具附在视图上
-        this.diagram.timeSequenceTool = this;
+        // 将时序图工具附在视图上
+        this.diagram.parentTool = this;
 
         // 配置视图的基本设置
         this.configDiagramSetting(this.diagram);
@@ -198,17 +210,37 @@
         // 初始化时间线
         this.initializeTimeLine();
 
-        // 添加调整大小监听事件
-        this.diagram.addDiagramListener("InitialLayoutCompleted", this.updateViewBounds);
+        // 布局初始化完成时，更新视图的图形边界
+        this.addDiagramListener("InitialLayoutCompleted", this.updateDocumentBounds, this);
 
-        // 添加调整大小监听事件
-        this.diagram.addDiagramListener("PartResized", this.updateViewBounds);
+        // 调整元素大小时，更新视图上所有链接的路由
+        //this.addDiagramListener("PartResized", this.updateAllLinksRoute, this);
 
-        // 添加选中元素移动监听事件
-        this.diagram.addDiagramListener("SelectionMoved", this.listenViewportBoundsChanged);
+        // 选中元素移动时，更新视图的图形边界
+        this.addDiagramListener("SelectionMoved", this.updateDocumentBounds, this);
 
-        // 添加视区改变监听事件
-        this.diagram.addDiagramListener("ViewportBoundsChanged", this.listenViewportBoundsChanged);
+        // 选中元素移动时，更新视图的可视边界坐标
+        this.addDiagramListener("SelectionMoved", this.updateViewPoint, this);
+
+        // 可视区域的边界改变时，更新视图的可视边界坐标
+        this.addDiagramListener("ViewportBoundsChanged", this.updateViewPoint, this);
+    };
+
+    /**
+    * 减小时间轴长度
+    */
+    TimeSequenceTool.prototype.decreaseTimeLineWidth = function () {
+        var diagram = this.diagram;
+        var tool = diagram.parentTool;
+        var object = diagram.timeline.locationObject; // 获取时间轴的坐标对象
+
+        // 减少当前长度的10%
+        object.width -= object.width / 10;
+
+        // 延时更新视图的链接路由
+        ts.TimeoutTool.doDelay(tool, tool.updateAllLinksRoute, 50);
+        // 延时更新链视的图形边界
+        ts.TimeoutTool.doDelay(tool, tool.updateDocumentBounds, 50);
     };
 
     /**
@@ -400,6 +432,23 @@
     };
 
     /**
+    * 增加时间轴长度
+    */
+    TimeSequenceTool.prototype.increaseTimeLineWidth = function () {
+        var diagram = this.diagram;
+        var tool = diagram.parentTool;
+        var object = diagram.timeline.locationObject; // 获取时间轴的坐标对象
+
+        // 增加当前长度的10%
+        object.width += object.width / 10;
+
+        // 延时更新视图的链接路由
+        ts.TimeoutTool.doDelay(tool, tool.updateAllLinksRoute, 20);
+        // 延时更新链视的图形边界
+        ts.TimeoutTool.doDelay(tool, tool.updateDocumentBounds, 20);
+    };
+
+    /**
     * 初始化模型数据
     *
     * @param modelData {object} 模型数据
@@ -459,49 +508,6 @@
     */
     TimeSequenceTool.prototype.listenIsBusyChanged = function (isBusy) {
 
-    };
-
-    /**
-    * 监听调整大小事件
-    *
-    * @param event {go.DiagramEvent} 视图事件
-    */
-    TimeSequenceTool.prototype.listenPartResized = function (event) {
-        if (!event || !event.diagram) return;
-
-        var diagram = event.diagram;
-        var timeline = diagram.timeline;
-
-        diagram.links.each(function (obj) {
-            var data = obj.data;
-            var dateTime = new Date(data.startDateTime);
-            var seconds = dateTime / 1000;
-            var relativePoint = timeline.graduatedPointForValue(seconds);
-
-            obj.pointX = timeline.location.x + relativePoint.x;
-            //obj.updateRoute();
-        });
-
-        diagram.rebuildParts();
-    };
-
-    /**
-    * 监听视区改变监听事件
-    *
-    * @param event {go.DiagramEvent} 视图事件
-    */
-    TimeSequenceTool.prototype.listenViewportBoundsChanged = function (event) {
-        if (!event || !event.diagram) return;
-
-        var diagram = event.diagram;
-        var model = diagram.model;
-        var vb = diagram.viewportBounds;
-
-        diagram.startTransaction("update scales");
-
-        model.setDataProperty(model.modelData, "viewPoint", new go.Point(vb.x, vb.y));
-
-        diagram.commitTransaction("update scales");
     };
 
     /**
@@ -567,6 +573,44 @@
     };
 
     /**
+    * 更新视图中的所有的链接路由
+    *
+    * @param event {go.DiagramEvent} 视图事件
+    */
+    TimeSequenceTool.prototype.updateAllLinksRoute = function () {
+        var diagram = this.diagram;
+        //var timeline = diagram.timeline;
+
+        diagram.links.each(function (obj) {
+            var data = obj.data;
+            var timeline = obj.diagram.timeline;
+            var dateTime = new Date(data.startDateTime);
+            var seconds = dateTime / 1000;
+            var relativePoint = timeline.graduatedPointForValue(seconds);
+
+            obj.pointX = timeline.location.x + relativePoint.x;
+            //obj.updateRoute();
+        });
+
+        diagram.rebuildParts();
+    };
+
+    /**
+    * 更新视图的图形边界
+    *
+    * @param event {go.DiagramEvent} 视图事件
+    */
+    TimeSequenceTool.prototype.updateDocumentBounds = function () {
+        var diagram = this.diagram;
+        var bounds = diagram.computePartsBounds(diagram.nodes); // 获取视图上的节点集合的边界
+        var bufferHeight = ts.Consts.BUFFER_HEIGHT; // 获取缓冲高度
+
+        // 计算视图的图形边界
+        diagram.fixedBounds = new go.Rect(bounds.x, bounds.y - bufferHeight,
+            bounds.width, bounds.height + bufferHeight);
+    };
+
+    /**
     * 刷新时间轴
     *
     * @param startDateTime {Date} 开始时间
@@ -591,14 +635,16 @@
         model.setDataProperty(model.modelData, "endDateTime", this.endDateTime);
     };
 
-    TimeSequenceTool.prototype.updateViewBounds = function (event) {
-        if (!event || !event.diagram) return;
+    /**
+    * 更新视图的可视边界坐标
+    */
+    TimeSequenceTool.prototype.updateViewPoint = function () {
+        var diagram = this.diagram;
+        var model = diagram.model;
+        var vb = diagram.viewportBounds;
 
-        var diagram = event.diagram;
-        var bounds = diagram.computePartsBounds(diagram.nodes);
-
-        diagram.fixedBounds = new go.Rect(bounds.x, bounds.y - ts.Consts.BUFFER_HEIGHT,
-            bounds.width, bounds.height + ts.Consts.BUFFER_HEIGHT);
+        model.setDataProperty(model.modelData, "viewPoint", new go.Point(vb.x, vb.y));
+        diagram.updateAllTargetBindings("viewPoint");
     };
 
     /**
@@ -623,6 +669,36 @@
 
     //#endregion 时序图工具
 
+    //#region 延时执行工具
+
+    /**
+    * 延时执行工具的构造函数
+    */
+    function TimeoutTool() {
+
+    }
+
+    /**
+    * 延时执行函数
+    *
+    * @param caller {Object} 处理呼出元
+    * @param func {String} 要延时执行的函数
+    * @param delay {Number} 延时时间
+    */
+    TimeoutTool.doDelay = function (caller, func, delay) {
+        if (!func) return;
+
+        // 清除对应id的计时器，防止函数被高频调用
+        clearTimeout(func.timerId);
+
+        // 记录计时器id，延时执行函数
+        func.timerId = setTimeout(function () {
+            func.call(caller);
+        }, delay);
+    };
+
+    //#endregion 延时执行工具
+
     //#region 模板管理器
 
     /**
@@ -634,14 +710,43 @@
     };
 
     /**
-    * 小时的标准间隔宽度 {Number}
+    * 样式资源集合 {Object}
     */
-    TemplateManager.STANDARD_WIDTH_H = 50;
-
-    /**
-    * 分钟的标准间隔宽度 {Number}
-    */
-    TemplateManager.STANDARD_WIDTH_M = 24;
+    TemplateManager.prototype.styles = {
+        // 部件样式_轴部件
+        partStyle: {
+            background: "#e3efff",
+            //background: "#bedaff",
+            graduatedMin: 0,
+            graduatedMax: 10,
+            graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
+            graduatedTickUnit: 1, //刻度间隔单元
+            isInDocumentBounds: false,
+            layerName: "Foreground",
+            movable: false,
+            //resizable: true,
+            selectionAdorned: false,
+        },
+        // 图形样式_主轴
+        shapeStyle: {
+            height: 1, // 高度设为1.去除多余高度
+            //stroke: "#519ABA",
+            stroke: "#8d959f",
+            strokeWidth: 2,
+        },
+        // 图形样式_刻度线
+        shapeStyle2: {
+            alignmentFocus: go.Spot.Bottom,
+            //stroke: "#519ABA",
+            stroke: "#8d959f",
+        },
+        // 文本样式_刻度文字
+        textBlockStyle: {
+            background: "transparent",
+            font: "10pt sans-serif",
+            stroke: "gray",
+        },
+    };
 
     /**
     * 用刻度转换刻度文字(日)
@@ -679,7 +784,7 @@
     */
     TemplateManager.prototype.convertHShapeIntervalByIntervalWidth = function (data) {
         var standardInterval = 3600; // 小时的标准间隔(3600秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_H; // 小时的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_H; // 小时的标准间隔宽度
         var width = data * standardInterval; // 当前每小时的间隔宽度
 
         if (standardWidth / 2 <= width) {
@@ -709,7 +814,7 @@
     */
     TemplateManager.prototype.convertHShapeVisibleByGraduated = function (data) {
         var standardInterval = 3600; // 小时的标准间隔(3600秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_H; // 小时的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_H; // 小时的标准间隔宽度
         var width = data * standardInterval; // 当前每小时的间隔宽度
         var visible = standardWidth / 16 < width ? true : false;
 
@@ -740,7 +845,7 @@
     */
     TemplateManager.prototype.convertHTextIntervalByIntervalWidth = function (data) {
         var standardInterval = 3600; // 小时的标准间隔(3600秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_H; // 小时的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_H; // 小时的标准间隔宽度
         var width = data * standardInterval; // 当前每小时的间隔宽度
 
         if (standardWidth <= width) {
@@ -770,18 +875,45 @@
     */
     TemplateManager.prototype.convertHTextVisibleByGraduated = function (data) {
         var standardInterval = 3600; // 小时的标准间隔(3600秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_H; // 小时的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_H; // 小时的标准间隔宽度
         var width = data * standardInterval; // 当前每小时的间隔宽度
         var visible = standardWidth / 4 < width ? true : false;
 
         return visible;
     };
 
-    TemplateManager.prototype.convertTLocationByViewPoint = function (data) {
-        var height = ts.Consts.BUFFER_HEIGHT;
-        var width = ts.Consts.BUFFER_WIDTH;
+    /**
+    * 用视野坐标转换轴线的位置
+    *
+    * @param data {Object} 绑定数据
+    * @return {go.Point}
+    */
+    TemplateManager.prototype.convertLocationByViewPoint = function (data) {
+        var bufferWidth = ts.Consts.BUFFER_WIDTH; // 获取缓冲宽度
+        var bufferHeight = ts.Consts.BUFFER_HEIGHT; // 获取缓冲高度
 
-        return new go.Point(width, data.y + height);
+        return new go.Point(bufferWidth, data.y + bufferHeight);
+    };
+
+    /**
+    * 用模型数据转化链接文本
+    *
+    * @param data {Object} 绑定数据
+    * @return {String}
+    */
+    TemplateManager.prototype.convertLTextByData = function (data) {
+        var startDateTime = new Date(data.startDateTime);
+        var endDateTime = new Date(data.endDateTime);
+        var seconds = (endDateTime - startDateTime) / (1000); // 获取秒数
+        var minute = parseInt(seconds / 60); // 获取分钟数
+        var second = seconds % 60; // 获取秒数
+
+        // 秒数小于10时，前面补0
+        if (second < 10) {
+            second = "0" + second;
+        }
+
+        return minute + ":" + second;
     };
 
     /**
@@ -792,7 +924,7 @@
     */
     TemplateManager.prototype.convertMShapeIntervalByIntervalWidth = function (data) {
         var standardInterval = 60; // 分钟的标准间隔(60秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_M; // 分钟的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_M; // 分钟的标准间隔宽度
         var width = data * standardInterval; // 当前每分钟的间隔宽度
 
         if (standardWidth / 2 <= width) {
@@ -822,7 +954,7 @@
     */
     TemplateManager.prototype.convertMShapeVisibleByGraduated = function (data) {
         var standardInterval = 60; // 分钟的标准间隔(60秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_M; // 分钟的间隔标准宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_M; // 分钟的间隔标准宽度
         var width = data * standardInterval; // 当前每分钟的间隔宽度
         var visible = standardWidth / 16 < width ? true : false;
 
@@ -837,7 +969,7 @@
     */
     TemplateManager.prototype.convertMTextIntervalByIntervalWidth = function (data) {
         var standardInterval = 60; // 分钟的标准间隔(60秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_M; // 分钟的标准间隔宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_M; // 分钟的标准间隔宽度
         var width = data * standardInterval; // 当前每分钟的间隔宽度
 
         if (standardWidth <= width) {
@@ -881,7 +1013,7 @@
     */
     TemplateManager.prototype.convertMTextVisibleByGraduated = function (data) {
         var standardInterval = 60; // 分钟的标准间隔(60秒)
-        var standardWidth = ts.TemplateManager.STANDARD_WIDTH_M; // 分钟的间隔标准宽度
+        var standardWidth = ts.Consts.STANDARD_WIDTH_M; // 分钟的间隔标准宽度
         var width = data * standardInterval; // 当前每分钟的间隔宽度
         var visible = standardWidth / 8 < width ? true : false;
 
@@ -908,28 +1040,17 @@
     };
 
     /**
-    * 用模型数据转化链接文本
+    * 用视野坐标转换节点的信息面板边距
     *
     * @param data {Object} 绑定数据
-    * @return {String}
+    * @return {go.Margin}
     */
-    TemplateManager.prototype.convertTextByData = function (data) {
-        var startDateTime = new Date(data.startDateTime);
-        var endDateTime = new Date(data.endDateTime);
-        var seconds = (endDateTime - startDateTime) / (1000); // 获取秒数
-        var minute = parseInt(seconds / 60); // 获取分钟数
-        var second = seconds % 60; // 获取秒数
-
-        // 秒数小于10时，前面补0
-        if (second < 10) {
-            second = "0" + second;
-        }
-
-        return minute + ":" + second;
+    TemplateManager.prototype.convertNMarginByViewPoint = function (data) {
+        return new go.Margin(0, 0, 0, data.x + 5);
     };
 
     /**
-    * 用模型数据转化时间线宽度
+    * 用模型数据转化轴线宽度
     *
     * @param data {Object} 绑定数据
     * @return {String}
@@ -953,47 +1074,34 @@
         var template =
             // 日期轴
             $$(go.Part, "Graduated",
+                this.styles.partStyle,
                 {
-                    background: "transparent",
-                    //background: "aliceblue",
-                    graduatedMin: 0,
-                    graduatedMax: 10,
-                    graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
-                    graduatedTickUnit: 1, //刻度间隔单元
-                    //height: 60,
-                    layerName: "Foreground",
                     locationObjectName: "MAIN_LINE",
-                    //locationSpot: go.Spot.BottomLeft,
-                    movable: false,
                     name: "DATE_LINE",
-                    selectionAdorned: false,
                 },
                 new go.Binding("graduatedMax", "endDateTime", this.convertGraduatedByDateTime).ofModel(),
                 new go.Binding("graduatedMin", "startDateTime", this.convertGraduatedByDateTime).ofModel(),
-                new go.Binding("location", "viewPoint", this.convertTLocationByViewPoint).ofModel(),
+                new go.Binding("location", "viewPoint", this.convertLocationByViewPoint).ofModel(),
                 // 日期线主轴
                 $$(go.Shape, "LineH",
+                    this.styles.shapeStyle,
                     {
-                        alignment: go.Spot.Bottom,
-                        height: 1, // 高度设为1.去除多余高度
                         name: "MAIN_LINE",
-                        stroke: "#519ABA",
-                        strokeWidth: 2,
                     },
-                    new go.Binding("width", "", this.convertWidthByModelData).makeTwoWay(this.convertModelDataByWidth).ofModel()
+                    new go.Binding("width", "", this.convertWidthByModelData).ofModel()
                 ),
                 // 刻度线(日)
                 $$(go.Shape,
+                    this.styles.shapeStyle2,
                     {
-                        alignmentFocus: go.Spot.Bottom,
                         geometryString: "M0 0 V35",
                         interval: 86400,
-                        stroke: "#519ABA",
                         strokeWidth: 2.5,
                     }
                 ),
                 // 刻度文字(日)
                 $$(go.TextBlock,
+                    this.styles.textBlockStyle,
                     {
                         font: "bold 10pt sans-serif",
                         graduatedFunction: this.convertDTextByGraduated,
@@ -1027,11 +1135,8 @@
                     location: new go.Point(0, ts.Consts.BUFFER_HEIGHT),
                     maxLocation: new go.Point(0, Infinity),
                     minLocation: new go.Point(0, -Infinity),
-                    //movable: false,
-                    //selectable: false,
                     selectionAdorned: false,
                 },
-                //new go.Binding("location", "originalPoint").ofModel(),
                 $$(go.Placeholder)
             );
 
@@ -1093,7 +1198,7 @@
                             name: "TEXT",
                             stroke: "#606060",
                         },
-                        new go.Binding("text", "", this.convertTextByData)
+                        new go.Binding("text", "", this.convertLTextByData)
                     )
                 )
             );
@@ -1125,6 +1230,7 @@
                         //background: "white",
                         name: "INFO_PANEL",
                     },
+                    new go.Binding("margin", "viewPoint", this.convertNMarginByViewPoint).ofModel(),
                     // 照片信息
                     $$(go.Picture,
                         {
@@ -1172,57 +1278,43 @@
         var template =
             // 时间轴
             $$(go.Part, "Graduated",
+                this.styles.partStyle,
                 {
-                    background: "transparent",
-                    //background: "aliceblue",
-                    graduatedMin: 0,
-                    graduatedMax: 10,
-                    graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
-                    graduatedTickUnit: 1, //刻度间隔单元
-                    //height: 60,
-                    layerName: "Foreground",
                     locationObjectName: "MAIN_LINE",
-                    //locationSpot: go.Spot.BottomLeft,
-                    movable: false,
                     name: "TIME_LINE",
-                    resizable: true,
-                    resizeAdornmentTemplate:
-                        // 调整大小控件
-                        $$(go.Adornment, "Spot",
-                            $$(go.Placeholder),
-                            $$(go.Shape,
-                                {
-                                    alignment: go.Spot.Right,
-                                    cursor: "e-resize",
-                                    desiredSize: new go.Size(4, 16),
-                                    fill: "lightblue",
-                                    stroke: "deepskyblue"
-                                }
-                            )
-                        ),
-                    resizeObjectName: "MAIN_LINE",
-                    selectionAdorned: false,
+                    //resizeAdornmentTemplate:
+                    //    // 调整大小控件
+                    //    $$(go.Adornment, "Spot",
+                    //        $$(go.Placeholder),
+                    //        $$(go.Shape,
+                    //            {
+                    //                alignment: go.Spot.Right,
+                    //                cursor: "e-resize",
+                    //                desiredSize: new go.Size(4, 16),
+                    //                fill: "lightblue",
+                    //                stroke: "deepskyblue"
+                    //            }
+                    //        )
+                    //    ),
+                    //resizeObjectName: "MAIN_LINE",
                 },
                 new go.Binding("graduatedMax", "endDateTime", this.convertGraduatedByDateTime).ofModel(),
                 new go.Binding("graduatedMin", "startDateTime", this.convertGraduatedByDateTime).ofModel(),
-                new go.Binding("location", "viewPoint", this.convertTLocationByViewPoint).ofModel(),
+                new go.Binding("location", "viewPoint", this.convertLocationByViewPoint).ofModel(),
                 // 时间线主轴
                 $$(go.Shape, "LineH",
+                    this.styles.shapeStyle,
                     {
-                        height: 1, // 高度设为1.去除多余高度
                         name: "MAIN_LINE",
-                        stroke: "#519ABA",
-                        strokeWidth: 2,
                     },
                     new go.Binding("width", "", this.convertWidthByModelData).makeTwoWay(this.convertModelDataByWidth).ofModel()
                 ),
                 // 刻度线(分)
                 $$(go.Shape,
+                    this.styles.shapeStyle2,
                     {
-                        alignmentFocus: go.Spot.Bottom,
                         geometryString: "M0 0 V5",
                         interval: 60,
-                        stroke: "#519ABA",
                         strokeWidth: 1,
                     },
                     new go.Binding("interval", "intervalWidth", this.convertMShapeIntervalByIntervalWidth).ofModel(),
@@ -1230,23 +1322,21 @@
                 ),
                 // 刻度文字(分)
                 $$(go.TextBlock,
+                    this.styles.textBlockStyle,
                     {
-                        font: "6pt sans-serif",
                         graduatedFunction: this.convertMTextByGraduated,
                         interval: 60,
                         segmentOffset: new go.Point(0, -20),
-                        stroke: "gray",
                     },
                     new go.Binding("interval", "intervalWidth", this.convertMTextIntervalByIntervalWidth).ofModel(),
                     new go.Binding("visible", "intervalWidth", this.convertMTextVisibleByGraduated).ofModel()
                 ),
                 // 刻度线(时)
                 $$(go.Shape,
+                    this.styles.shapeStyle2,
                     {
-                        alignmentFocus: go.Spot.Bottom,
                         geometryString: "M0 0 V15",
                         interval: 3600,
-                        stroke: "#519ABA",
                         strokeWidth: 1.5,
                     },
                     new go.Binding("interval", "intervalWidth", this.convertHShapeIntervalByIntervalWidth).ofModel(),
@@ -1254,13 +1344,11 @@
                 ),
                 // 刻度文字(时)
                 $$(go.TextBlock,
+                    this.styles.textBlockStyle,
                     {
-                        background: "white",
-                        font: "bold 8pt sans-serif",
                         graduatedFunction: this.convertHTextByGraduated,
                         interval: 3600,
                         segmentOffset: new go.Point(0, -35),
-                        stroke: "gray",
                     },
                     new go.Binding("interval", "intervalWidth", this.convertHTextIntervalByIntervalWidth).ofModel(),
                     new go.Binding("visible", "intervalWidth", this.convertHTextVisibleByGraduated).ofModel()
@@ -1308,7 +1396,25 @@
         // 过滤自反链接
         if (this.fromNode === this.toNode) return;
 
-        return go.Link.prototype.computePoints.call(this);
+        var result = go.Link.prototype.computePoints.call(this);
+
+        //if (this.pointsCount !== 0) {
+        //    var data = this.data;
+        //    var num = this.pointsCount;
+        //    var fromPoint = this.getPoint(0);
+        //    var toPoint = this.getPoint(num - 1);
+        //    var timeline = this.diagram.timeline; // 获取视图的时间轴组件
+
+        //    var startDateTime = new Date(data.startDateTime);
+        //    var startRelativePoint = timeline.graduatedPointForValue(startDateTime / 1000);
+        //    fromPoint.setTo(timeline.location.x + startRelativePoint.x, fromPoint.y);
+
+        //    var endDateTime = new Date(data.endDateTime);
+        //    var endRelativePoint = timeline.graduatedPointForValue(endDateTime / 1000);
+        //    toPoint.setTo(timeline.location.x + endRelativePoint.x, toPoint.y);
+        //}
+
+        return result;
     };
 
     /**
@@ -1353,6 +1459,7 @@
         Consts: Consts,
         CustomLink: CustomLink,
         TemplateManager: TemplateManager,
+        TimeoutTool: TimeoutTool,
         TimeSequenceTool: TimeSequenceTool,
     };
 })();
