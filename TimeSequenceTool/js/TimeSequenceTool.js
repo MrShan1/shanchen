@@ -73,10 +73,10 @@
 
         var listener = function (event) {
             if (caller) {
-                func.call(caller);
+                func.apply(caller, arguments);
             }
             else {
-                func();
+                func.apply(null, arguments);
             }
         };
 
@@ -176,7 +176,20 @@
         diagram.commandHandler.increaseZoom = this.increaseTimeLineWidth; // 覆写增加缩放处理
         diagram.contentAlignment = go.Spot.TopLeft; // 设置内容对齐方式为左上
         //diagram.grid.visible = true; // 显示背景网格
-        diagram.layout = $$(go.GridLayout, { wrappingColumn: 1, isOngoing: false }); // 设置视图的布局为网格布局
+        diagram.layout = $$(go.GridLayout,
+            {
+                alignment: go.GridLayout.Position,
+                comparer: function (a, b) {
+                    var ay = a.location.y;
+                    var by = b.location.y;
+                    if (isNaN(ay) || isNaN(by)) return 0;
+                    if (ay < by) return -1;
+                    if (ay > by) return 1;
+                    return 0;
+                },
+                //isOngoing: false,
+                wrappingColumn: 1,
+            }); // 设置视图的布局为网格布局
         diagram.linkTemplate = this.templateManager.linkTemplate; // 设置视图的链接模板
         diagram.model = new go.GraphLinksModel(); // 设置视图的数据模型
         diagram.nodeTemplate = this.templateManager.nodeTemplate; // 设置视图的节点模板
@@ -210,8 +223,8 @@
         // 初始化时间线
         this.initializeTimeLine();
 
-        // 布局初始化完成时，更新视图的图形边界
-        this.addDiagramListener("InitialLayoutCompleted", this.updateDocumentBounds, this);
+        // 布局完成时，更新视图的图形边界
+        this.addDiagramListener("LayoutCompleted", this.updateDocumentBounds, this);
 
         // 调整元素大小时，更新视图上所有链接的路由
         //this.addDiagramListener("PartResized", this.updateAllLinksRoute, this);
@@ -221,6 +234,9 @@
 
         // 选中元素移动时，更新视图的可视边界坐标
         this.addDiagramListener("SelectionMoved", this.updateViewPoint, this);
+
+        // 选中元素移动时，更新视图的布局
+        this.addDiagramListener("SelectionMoved", this.updateLayout, this);
 
         // 可视区域的边界改变时，更新视图的可视边界坐标
         this.addDiagramListener("ViewportBoundsChanged", this.updateViewPoint, this);
@@ -483,18 +499,15 @@
     TimeSequenceTool.prototype.initializeTimeLine = function () {
         // 创建日期线
         var dateline = this.templateManager.dateLineTemplate;
-        //dateline.location = new go.Point(0, 0);
-        dateline.isLayoutPositioned = false;
-        dateline.data = this.diagram.model.modelData; // 将数据模型作为时间线的数据源
+        dateline.data = this.diagram.model.modelData; // 将数据模型作为轴线的数据源
 
         // 将日期轴添加进视图中
         this.diagram.add(dateline);
+        this.diagram.dateline = dateline;
 
         // 创建时间线
         var timeline = this.templateManager.timeLineTemplate;
-        //timeline.location = new go.Point(0, 0);
-        timeline.isLayoutPositioned = false;
-        timeline.data = this.diagram.model.modelData; // 将数据模型作为时间线的数据源
+        timeline.data = this.diagram.model.modelData; // 将数据模型作为轴线的数据源
 
         // 将时间轴添加进视图中
         this.diagram.add(timeline);
@@ -574,31 +587,22 @@
 
     /**
     * 更新视图中的所有的链接路由
-    *
-    * @param event {go.DiagramEvent} 视图事件
     */
     TimeSequenceTool.prototype.updateAllLinksRoute = function () {
         var diagram = this.diagram;
-        //var timeline = diagram.timeline;
 
+        // 重新计算链接路由
         diagram.links.each(function (obj) {
-            var data = obj.data;
-            var timeline = obj.diagram.timeline;
-            var dateTime = new Date(data.startDateTime);
-            var seconds = dateTime / 1000;
-            var relativePoint = timeline.graduatedPointForValue(seconds);
-
-            obj.pointX = timeline.location.x + relativePoint.x;
-            //obj.updateRoute();
+            obj.computeStartPointX();
+            obj.computeEndPointX();
         });
 
+        // 更新视图
         diagram.rebuildParts();
     };
 
     /**
     * 更新视图的图形边界
-    *
-    * @param event {go.DiagramEvent} 视图事件
     */
     TimeSequenceTool.prototype.updateDocumentBounds = function () {
         var diagram = this.diagram;
@@ -608,6 +612,14 @@
         // 计算视图的图形边界
         diagram.fixedBounds = new go.Rect(bounds.x, bounds.y - bufferHeight,
             bounds.width, bounds.height + bufferHeight);
+    };
+
+    /**
+    * 更新视图的布局
+    */
+    TimeSequenceTool.prototype.updateLayout = function () {
+        // 布局无效化，触发重新布局
+        this.diagram.layout.invalidateLayout();
     };
 
     /**
@@ -643,7 +655,9 @@
         var model = diagram.model;
         var vb = diagram.viewportBounds;
 
+        // 更新视图的可视边界坐标
         model.setDataProperty(model.modelData, "viewPoint", new go.Point(vb.x, vb.y));
+        // 更新视图的相关数据绑定
         diagram.updateAllTargetBindings("viewPoint");
     };
 
@@ -715,13 +729,12 @@
     TemplateManager.prototype.styles = {
         // 部件样式_轴部件
         partStyle: {
-            background: "#e3efff",
-            //background: "#bedaff",
             graduatedMin: 0,
             graduatedMax: 10,
             graduatedTickBase: 1514736000, // 刻度间隔参照标准(2018/01/01 00:00:00)/1000
             graduatedTickUnit: 1, //刻度间隔单元
             isInDocumentBounds: false,
+            isLayoutPositioned: false,
             layerName: "Foreground",
             movable: false,
             //resizable: true,
@@ -1076,6 +1089,7 @@
             $$(go.Part, "Graduated",
                 this.styles.partStyle,
                 {
+                    background: "#e3efff",
                     locationObjectName: "MAIN_LINE",
                     name: "DATE_LINE",
                 },
@@ -1103,6 +1117,7 @@
                 $$(go.TextBlock,
                     this.styles.textBlockStyle,
                     {
+                        alignmentFocus: go.Spot.TopLeft,
                         font: "bold 10pt sans-serif",
                         graduatedFunction: this.convertDTextByGraduated,
                         interval: 86400,
@@ -1144,6 +1159,47 @@
     };
 
     /**
+    * 创建装饰模板_标准
+    *
+    * return {go.Adornment} 装饰模板
+    */
+    TemplateManager.prototype.createAdornmentTemplate = function () {
+        var template =
+            // 装饰模板
+            $$(go.Adornment, "Spot",
+                // 信息文本(起始时间)
+                $$(go.TextBlock,
+                    {
+                        alignmentFocus: go.Spot.Right,
+                        background: "white",
+                        font: "bold 6pt sans-serif",
+                        margin: new go.Margin(0, 5),
+                        name: "TEXT",
+                        segmentIndex: 0,
+                        segmentOffset: new go.Point(-8, 0),
+                        stroke: "red",
+                    },
+                    new go.Binding("text", "startDateTime")
+                ),
+                // 信息文本(结束时间)
+                $$(go.TextBlock,
+                    {
+                        alignmentFocus: go.Spot.Left,
+                        background: "white",
+                        font: "bold 6pt sans-serif",
+                        name: "TEXT",
+                        segmentIndex: -1,
+                        segmentOffset: new go.Point(8, 0),
+                        stroke: "red",
+                    },
+                    new go.Binding("text", "endDateTime")
+                )
+            );
+
+        return template;
+    };
+
+    /**
     * 创建链接模板_标准
     *
     * return {go.Link} 链接模板
@@ -1157,7 +1213,7 @@
                     routing: go.Link.Orthogonal,
                 },
                 // 链接的线
-                $$(go.Shape, "Rectangle",
+                $$(go.Shape,
                     {
                         stroke: "#606060",
                         strokeWidth: 1.5
@@ -1254,9 +1310,9 @@
                 ),
                 // 链接轴
                 $$(go.Shape, "LineH",
+                    this.styles.shapeStyle,
                     {
                         alignment: go.Spot.Left,
-                        height: 1, // 高度设为1.去除多余高度
                         margin: new go.Margin(-20, 0, 0, 0),
                         portId: "",
                         stroke: "#519aba",
@@ -1346,6 +1402,7 @@
                 $$(go.TextBlock,
                     this.styles.textBlockStyle,
                     {
+                        alignmentFocus: go.Spot.TopLeft,
                         graduatedFunction: this.convertHTextByGraduated,
                         interval: 3600,
                         segmentOffset: new go.Point(0, -35),
@@ -1363,10 +1420,12 @@
     */
     TemplateManager.prototype.createTemplates = function () {
         this.dateLineTemplate = this.createDatelineTemplate();
+        this.timeLineTemplate = this.createTimelineTemplate();
+
         this.groupTemplate = this.createGroupTemplate();
         this.linkTemplate = this.createLinkTemplate();
+        this.linkTemplate.selectionAdornmentTemplate = this.createAdornmentTemplate();
         this.nodeTemplate = this.createNodeTemplate();
-        this.timeLineTemplate = this.createTimelineTemplate();
     };
 
     //#endregion 模板管理器
@@ -1383,9 +1442,31 @@
     go.Diagram.inherit(CustomLink, go.Link);
 
     /**
-    * 链接上点的横坐标 {Number}
+    * 链接上起始端口的横坐标 {Number}
     */
-    CustomLink.prototype.pointX = null;
+    CustomLink.prototype.endPointX = null;
+
+    /**
+    * 链接上结束端口的横坐标 {Number}
+    */
+    CustomLink.prototype.startPointX = null;
+
+    /**
+    * 计算结束端口的横坐标
+    *
+    * @return {Number} 结束端口的横坐标
+    */
+    CustomLink.prototype.computeEndPointX = function () {
+        var data = this.data; // 获取绑定数据
+        var timeline = this.diagram.timeline; // 获取视图的时间轴组件
+        var dateTime = new Date(data.endDateTime); // 获取结束日期时间
+        var seconds = dateTime / 1000; // 获取秒数
+        var relativePoint = timeline.graduatedPointForValue(seconds); // 获取相对位置
+
+        this.endPointX = timeline.location.x + relativePoint.x; // 计算结束端口的横坐标
+
+        return this.endPointX;
+    };
 
     /**
     * 计算链接路由上的点集合(重写)
@@ -1396,25 +1477,24 @@
         // 过滤自反链接
         if (this.fromNode === this.toNode) return;
 
-        var result = go.Link.prototype.computePoints.call(this);
+        return go.Link.prototype.computePoints.call(this);
+    };
 
-        //if (this.pointsCount !== 0) {
-        //    var data = this.data;
-        //    var num = this.pointsCount;
-        //    var fromPoint = this.getPoint(0);
-        //    var toPoint = this.getPoint(num - 1);
-        //    var timeline = this.diagram.timeline; // 获取视图的时间轴组件
+    /**
+    * 计算起始端口的横坐标
+    *
+    * @return {Number} 起始端口的横坐标
+    */
+    CustomLink.prototype.computeStartPointX = function () {
+        var data = this.data; // 获取绑定数据
+        var timeline = this.diagram.timeline; // 获取视图的时间轴组件
+        var dateTime = new Date(data.startDateTime); // 获取起始日期时间
+        var seconds = dateTime / 1000; // 获取秒数
+        var relativePoint = timeline.graduatedPointForValue(seconds); // 获取相对位置
 
-        //    var startDateTime = new Date(data.startDateTime);
-        //    var startRelativePoint = timeline.graduatedPointForValue(startDateTime / 1000);
-        //    fromPoint.setTo(timeline.location.x + startRelativePoint.x, fromPoint.y);
+        this.startPointX = timeline.location.x + relativePoint.x; // 计算起始端口的横坐标
 
-        //    var endDateTime = new Date(data.endDateTime);
-        //    var endRelativePoint = timeline.graduatedPointForValue(endDateTime / 1000);
-        //    toPoint.setTo(timeline.location.x + endRelativePoint.x, toPoint.y);
-        //}
-
-        return result;
+        return this.startPointX;
     };
 
     /**
@@ -1431,19 +1511,18 @@
     */
     CustomLink.prototype.getLinkPoint = function (node, port, spot, from, ortho, othernode, otherport) {
         var point = port.getDocumentPoint(go.Spot.Center); // 获取端口的相对位置
-        var timeline = this.diagram.timeline; // 获取视图的时间轴组件
+        var newPointX = null; // 端口的横坐标
 
-        // 横坐标不存在时，根据起始时间计算端口所在点的横坐标
-        if (this.pointX === null) {
-            var data = this.data;
-            var dateTime = new Date(data.startDateTime);
-            var seconds = dateTime / 1000;
-            var relativePoint = timeline.graduatedPointForValue(seconds);
-
-            this.pointX = timeline.location.x + relativePoint.x;
+        if (from) {
+            // 端口为起始端口时，使用起始端口的横坐标
+            newPointX = this.startPointX ? this.startPointX : this.computeStartPointX();
+        }
+        else {
+            // 端口为结束端口时，使用结束端口的横坐标
+            newPointX = this.endPointX ? this.endPointX : this.computeEndPointX();
         }
 
-        var x = this.pointX;
+        var x = newPointX;
         var y = point.y; // 纵坐标保持不变
 
         return new go.Point(x, y);
