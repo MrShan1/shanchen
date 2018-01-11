@@ -611,7 +611,7 @@
 
         // 计算视图的图形边界
         diagram.fixedBounds = new go.Rect(bounds.x, bounds.y - bufferHeight,
-            bounds.width, bounds.height + bufferHeight);
+            bounds.width + 58, bounds.height + bufferHeight);
     };
 
     /**
