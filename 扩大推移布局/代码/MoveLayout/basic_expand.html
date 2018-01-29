@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Basic GoJS Sample</title>
+    <meta name="description" content="Interactive GoJS diagram demonstrating creating new nodes and links, reconnecting links, grouping and ungrouping, and context menus and tooltips for nodes, for links, and for the diagram background." />
+    <!-- Copyright 1998-2016 by Northwoods Software Corporation. -->
+    <meta charset="UTF-8">
+    <script src="js/go-debug-1.7-test.js"></script>
+    <script src="js/MoveLayout.js"></script>
+    <script id="code">
+        function init() {
+            var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+            myDiagram =
+              $(go.Diagram, "myDiagramDiv",  // create a Diagram for the DIV HTML element
+                {
+                    // position the graph in the middle of the diagram
+                    //initialContentAlignment: go.Spot.Center,
+                    autoScale: go.Diagram.Uniform,
+                    contentAlignment: go.Spot.Center,
+                    layout: $(go.ForceDirectedLayout),
+                    nodeTemplate:
+                      $(go.Node, "Auto",
+                        new go.Binding("position", "bounds", function (b) { return b.position; })
+                                      .makeTwoWay(function (p, d) { d.bounds.position = p; return d.bounds; }),
+                        { width: 70, height: 20 },  // in cooperation with the load function, below
+                        $(go.Shape, "Rectangle",
+                          new go.Binding("fill", "color")),
+                        $(go.TextBlock,
+                          { margin: 2 },
+                          new go.Binding("text", "color")),
+                        {
+                            toolTip:
+                              $(go.Adornment, "Auto",
+                                $(go.Shape, { fill: "lightyellow" }),
+                                $(go.TextBlock, { margin: 3 },
+                                  new go.Binding("text", "",
+                                                 function (d) { return "key: " + d.key + "\nbounds: " + d.bounds.toString(); }))
+                              )
+                        }
+                      ),
+
+                    // Define the template for Links
+                    linkTemplate:
+                      $(go.Link,
+                        $(go.Shape)
+                      ),
+                });
+
+            myDiagram.model = $(go.GraphLinksModel);
+
+            load();
+        }
+
+        function generateNodes(model, min, max) {
+            if (isNaN(min) || min < 0) min = 2;
+            if (isNaN(max) || max < min) max = min;
+            var nodeArray = [];
+            var numNodes = Math.floor(Math.random() * (max - min + 1)) + min;
+            for (var i = 0; i < numNodes; i++) {
+                var d = {
+                    key: i,
+                    color: go.Brush.randomColor()  // the node's color
+                };
+                //!!!???@@@ this needs to be customized to account for your chosen Node template
+                d.bounds = new go.Rect(0, 0, 70, 20);
+                nodeArray.push(d);
+            }
+            model.nodeDataArray = nodeArray;
+        };
+
+        function generateLinks(model, min, max) {
+            if (model.nodeDataArray.length < 2) return;
+            if (isNaN(min) || min < 1) min = 1;
+            if (isNaN(max) || max < min) max = min;
+            var linkArray = [];
+            // make two Lists of nodes to keep track of where links already exist
+            var nodes = new go.List();
+            nodes.addAll(model.nodeDataArray);
+            var available = new go.List();
+            available.addAll(nodes);
+            for (var i = 0; i < nodes.length; i++) {
+                var next = nodes.elt(i);
+                available.remove(next)
+                var children = Math.floor(Math.random() * (max - min + 1)) + min;
+                for (var j = 1; j <= children; j++) {
+                    if (available.length === 0) break;
+                    var to = available.elt(0);
+                    available.remove(to);
+                    linkArray.push({
+                        from: next.key,
+                        to: to.key
+                    });
+                }
+            }
+            model.linkDataArray = linkArray;
+        };
+
+        function load() {
+            var model = myDiagram.model;
+
+            generateNodes(model, 200, 200);
+            generateLinks(model, 1, 5);
+
+            myDiagram.layoutDiagram(true);
+
+            //myDiagram.rebuidParts();
+
+            //myDiagram.remove(myLoading);
+        };
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <!--<button style="width:50px; height:30px" onclick="load()">加载</button>-->
+        <button style="width:50px; height:30px" onclick="move()">推移</button>
+        <div id="myDiagramDiv" style="border: solid 1px black; width:1700px; height:900px"></div>
+    </div>
+</body>
+</html>
