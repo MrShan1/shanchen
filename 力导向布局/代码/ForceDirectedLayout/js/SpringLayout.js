@@ -1,4 +1,4 @@
-﻿/// <reference path="go.js" />
+﻿/// <reference path="go-debug-1.7-test.js" />
 
 function SpringLayout() {
 
@@ -82,7 +82,8 @@ SpringLayout.prototype.doPrefixLayout = function (diagram) {
 
 SpringLayout.prototype.play = function (a) {
     //var d = 1e3 / 24;
-    var d = 1e3 / 50;
+    //var d = 1e3 / 50;
+    var d = 1e3 / 100;
     this.stop(), a = null == a ? d : a;
     var b = this;
     this.timer = setInterval(function () {
@@ -111,6 +112,26 @@ SpringLayout.prototype.nextFrame = function () {
             continue;
         }
 
+        // 计算节点之间的斥力
+        var param = 50;
+        var nodes = this.diagram.nodes;
+        var fixedParts = this.fixedParts;
+        nodes.each(function (node) {
+            if (g !== node && !fixedParts.contains(node)) {
+                var distX = node.location.x - g.location.x;
+                var distY = node.location.y - g.location.y;
+                var dist = Math.sqrt(distX * distX + distY * distY);
+
+                if (dist < 100) {
+                    var moveX = distX / dist * param * param / dist * 2;
+                    var moveY = distY / dist * param * param / dist * 2;
+
+                    node.moveTo(node.location.x + moveX, node.location.y + moveY);
+                }
+            }
+        });
+
+
         if (0 != this.e) {
             var n = h.location.x - Math.cos(m) * this.e;
             var o = h.location.y - Math.sin(m) * this.e;
@@ -125,7 +146,7 @@ SpringLayout.prototype.nextFrame = function () {
 
         i *= this.friction;
         j *= this.friction;
-        j += this.gravity;
+        j += this.gravity; // 重力垂直向下
         //g.location.x += i;
         //g.location.y += j;
         g.moveTo(g.location.x + i, g.location.y + j);
