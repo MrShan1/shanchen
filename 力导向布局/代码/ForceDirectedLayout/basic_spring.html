@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Basic GoJS Sample</title>
+    <meta name="description" content="Interactive GoJS diagram demonstrating creating new nodes and links, reconnecting links, grouping and ungrouping, and context menus and tooltips for nodes, for links, and for the diagram background." />
+    <!-- Copyright 1998-2016 by Northwoods Software Corporation. -->
+    <meta charset="UTF-8">
+    <script src="js/go-debug-1.7-test.js"></script>
+    <script src="js/SpringLayout.js"></script>
+    <script id="code">
+        function init() {
+            var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+            myDiagram =
+              $(go.Diagram, "myDiagramDiv",  // create a Diagram for the DIV HTML element
+                {
+                    initialContentAlignment: go.Spot.Center,
+                });
+
+            // Create the Diagram's Model:
+            var nodeDataArray = [
+              { key: 1, text: "Alpha", color: "lightblue" },
+              { key: 2, text: "Beta", color: "orange" },
+              { key: 3, text: "Gamma", color: "lightgreen" },
+
+              //{ key: 4, text: "Delta", color: "pink" },
+              { key: 5, text: "Delta", color: "pink" },
+              { key: 6, text: "Delta", color: "pink" },
+              { key: 7, text: "Delta", color: "pink" },
+              //{ key: 8, text: "Delta", color: "pink" },
+
+              { key: 9, text: "Gamma", color: "lightgreen" },
+              { key: 10, text: "Delta", color: "pink" },
+              { key: 11, text: "Delta", color: "pink" },
+
+            ];
+            var linkDataArray = [
+              //{ from: 1, to: 4, color: "blue" },
+              //{ from: 9, to: 4, color: "blue" },
+
+              { from: 1, to: 5, color: "blue" },
+              { from: 3, to: 5, color: "blue" },
+
+              { from: 2, to: 6, color: "blue" },
+              { from: 3, to: 6, color: "blue" },
+
+              { from: 1, to: 7, color: "blue" },
+              { from: 2, to: 7, color: "blue" },
+              { from: 3, to: 7, color: "blue" },
+
+              { from: 1, to: 10, color: "blue" },
+              { from: 9, to: 10, color: "blue" },
+
+              { from: 2, to: 11, color: "blue" },
+              { from: 9, to: 11, color: "blue" },
+            ];
+
+            myDiagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+
+            //var layout = new go.ForceDirectedLayout();
+            //myDiagram.layout = layout;
+
+            var node1 = myDiagram.findNodeForKey(1);
+            var node2 = myDiagram.findNodeForKey(2);
+            var node3 = myDiagram.findNodeForKey(3);
+            var node9 = myDiagram.findNodeForKey(9);
+
+            var layout = new SpringLayout();
+            layout.fixedParts.add(node1);
+            layout.fixedParts.add(node2);
+            layout.fixedParts.add(node3);
+            layout.fixedParts.add(node9);
+
+            layout.spring = 0.9;
+            layout.friction = 0.1;
+            layout.grivity = 0;
+            //layout.minLength = 100;
+
+            layout.doLayout(myDiagram);
+
+        }
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <!--<h3>Basic GoJS Sample</h3>-->
+        <div id="myDiagramDiv" style="border: solid 1px black; width:1400px; height:900px"></div>
+    </div>
+</body>
+</html>
