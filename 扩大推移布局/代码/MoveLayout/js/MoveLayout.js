@@ -44,7 +44,7 @@ ExpandLayout.prototype.doLayout = function (diagram, nodes, space) {
     var b = this;
     this.timer = setInterval(function () {
         b.nextFrame()
-    }, 100)
+    }, 1)
 };
 
 ExpandLayout.prototype.getMovedNodes = function (nodes, centerNodes) {
@@ -230,6 +230,9 @@ function move() {
     });
 
     if (nodes.count > 0) {
+        //var preLayout = new go.CircularLayout();
+        //preLayout.doLayout(nodes);
+
         var layout = new ExpandLayout();
         layout.doLayout(myDiagram, nodes, 20);
     }
