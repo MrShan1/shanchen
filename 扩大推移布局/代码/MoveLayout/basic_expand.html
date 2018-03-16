@@ -19,12 +19,19 @@
                     //initialContentAlignment: go.Spot.Center,
                     initialAutoScale: go.Diagram.Uniform,
                     contentAlignment: go.Spot.Center,
-                    layout: $(go.ForceDirectedLayout),
+                    layout: $(go.ForceDirectedLayout, {
+                        isInitial: true,
+                        isOngoing: false,
+                    }),
                     nodeTemplate:
                       $(go.Node, "Auto",
                         new go.Binding("position", "bounds", function (b) { return b.position; })
                                       .makeTwoWay(function (p, d) { d.bounds.position = p; return d.bounds; }),
-                        { width: 70, height: 20 },  // in cooperation with the load function, below
+                        {
+                            width: 70,
+                            height: 20,
+                            doubleClick: expandRelation,
+                        },  // in cooperation with the load function, below
                         $(go.Shape, "Rectangle",
                           new go.Binding("fill", "color")),
                         $(go.TextBlock,
@@ -100,7 +107,7 @@
         function load() {
             var model = myDiagram.model;
 
-            generateNodes(model, 200, 200);
+            generateNodes(model, 20, 20);
             generateLinks(model, 1, 5);
 
             myDiagram.layoutDiagram(true);

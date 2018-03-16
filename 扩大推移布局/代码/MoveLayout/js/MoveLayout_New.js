@@ -11,9 +11,9 @@ ExpandLayout.prototype.doLayout = function (diagram, location, nodes) {
 
     var mainNodes = this.getMainNodes(diagram, nodes);
 
-    var rect = this.getRect(diagram, nodes);
-
     var distance = this.getDistance(nodes);
+
+    var rect = this.getRect(diagram, nodes, distance);
 
     var startAngle = this.getAngle(center, location);
 
@@ -97,10 +97,16 @@ ExpandLayout.prototype.getMainNodes = function (diagram, nodes) {
     return list;
 };
 
-ExpandLayout.prototype.getRect = function (diagram, nodes) {
-    if (!diagram || !nodes) return;
+ExpandLayout.prototype.getRect = function (diagram, nodes, distance) {
+    if (!diagram || !nodes || !distance) return;
 
     var rect = diagram.computePartsBounds(nodes);
+    var d = distance / 2;
+
+    rect.x = rect.x - d;
+    rect.y = rect.y - d;
+    rect.width = rect.width + d * 2;
+    rect.height = rect.height + d * 2;
 
     return rect;
 };
@@ -172,4 +178,51 @@ function move() {
         var layout = new ExpandLayout();
         layout.doLayout(myDiagram, center, nodes);
     }
+};
+
+function expandRelation(e, obj) {
+    var currentNode = obj.part;
+    var data = currentNode.data;
+
+    var nodeArray = [];
+    var linkArray = [];
+    var numNodes = 5;
+
+    for (var i = 0; i < numNodes; i++) {
+        var d = {
+            //key: data.key + "_" + i,
+            key: go.Brush.randomColor(),
+            color: go.Brush.randomColor()  // the node's color
+        };
+        //!!!???@@@ this needs to be customized to account for your chosen Node template
+        d.bounds = new go.Rect(0, 0, 70, 20);
+        nodeArray.push(d);
+
+        var l = {
+            from: data.key,
+            to: d.key
+        }
+        linkArray.push(l);
+    }
+
+    myDiagram.model.addNodeDataCollection(nodeArray);
+    myDiagram.model.addLinkDataCollection(linkArray);
+
+    var nodes = new go.List();
+    nodeArray.forEach(function (data) {
+        var node = myDiagram.findNodeForData(data);
+        if (node) {
+            nodes.add(node);
+        }
+    });
+
+    //var layout = new go.CircularLayout();
+    //var layout = new go.ForceDirectedLayout();
+    var layout = new go.GridLayout();
+    layout.doLayout(nodes);
+
+    var center = currentNode.getDocumentPoint(go.Spot.Center);
+
+    var layout = new ExpandLayout();
+    layout.doLayout(myDiagram, center, nodes);
 };
