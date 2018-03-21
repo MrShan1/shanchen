@@ -4,6 +4,8 @@ function ExpandLayout() {
 
 };
 
+ExpandLayout.prototype.sweep = 180;
+
 ExpandLayout.prototype.doLayout = function (diagram, location, nodes) {
     if (!diagram || !location || !nodes || nodes.count === 0) return;
 
@@ -17,9 +19,9 @@ ExpandLayout.prototype.doLayout = function (diagram, location, nodes) {
 
     var startAngle = this.getAngle(center, location);
 
-    var startRadius = this.hasNodeAtPoint(diagram, location) ? distance : 100;
+    var startRadius = this.hasNodeAtPoint(diagram, location) ? this.getStartDistance(rect) : 100;
 
-    var newLocation = this.getLocation(mainNodes, location, rect, distance, startAngle, startRadius);
+    var newLocation = this.getLocation2(mainNodes, location, rect, distance, startAngle, startRadius);
 
     this.moveNodes(nodes, rect.center, newLocation);
 };
@@ -38,17 +40,17 @@ ExpandLayout.prototype.getAngle = function (center, location) {
 ExpandLayout.prototype.getDistance = function (nodes) {
     if (!nodes) return;
 
-    var distance = 0;
+    var distance = Infinity;
 
     nodes.each(function (node) {
         var width = node.width;
         var height = node.height;
 
-        if (distance < width) {
+        if (distance > width) {
             distance = width;
         }
 
-        if (distance < height) {
+        if (distance > height) {
             distance = height;
         }
     });
@@ -65,12 +67,50 @@ ExpandLayout.prototype.getLocation = function (mainNodes, location, rect, distan
     while (!newLocation) {
         var r = startRadius + i * distance;
         var rotation = distance / (2 * Math.PI * r) * 360;
+        var sweep = this.sweep;
 
-        for (var angle = startAngle; angle < startAngle + 360; angle = angle + rotation) {
+        for (var angle = startAngle; angle < startAngle + sweep; angle = angle + rotation) {
             var x = location.x + r * Math.cos(angle / 180 * Math.PI);
             var y = location.y + r * Math.sin(angle / 180 * Math.PI);
             var rect = new go.Rect(x - (rect.width / 2), y - (rect.height / 2), rect.width, rect.height);
 
+            if (!this.isHit(rect, mainNodes)) {
+                newLocation = new go.Point(x, y);
+                break;
+            }
+        }
+
+        i++;
+    }
+
+    return newLocation;
+};
+
+ExpandLayout.prototype.getLocation2 = function (mainNodes, location, rect, distance, startAngle, startRadius) {
+    if (!mainNodes || !location || !rect) return;
+
+    var i = 0;
+    var newLocation = null;
+
+    while (!newLocation) {
+        var r = startRadius + i * distance;
+        var rotation = distance / (2 * Math.PI * r) * 360;
+        var sweep = this.sweep / 2;
+
+        for (var angle = 0; angle < sweep; angle = angle + rotation) {
+            var currentAngle = startAngle + angle;
+            var x = location.x + r * Math.cos(currentAngle / 180 * Math.PI);
+            var y = location.y + r * Math.sin(currentAngle / 180 * Math.PI);
+            var rect = new go.Rect(x - (rect.width / 2), y - (rect.height / 2), rect.width, rect.height);
+            if (!this.isHit(rect, mainNodes)) {
+                newLocation = new go.Point(x, y);
+                break;
+            }
+
+            var currentAngle = startAngle - angle;
+            var x = location.x + r * Math.cos(currentAngle / 180 * Math.PI);
+            var y = location.y + r * Math.sin(currentAngle / 180 * Math.PI);
+            var rect = new go.Rect(x - (rect.width / 2), y - (rect.height / 2), rect.width, rect.height);
             if (!this.isHit(rect, mainNodes)) {
                 newLocation = new go.Point(x, y);
                 break;
@@ -101,7 +141,7 @@ ExpandLayout.prototype.getRect = function (diagram, nodes, distance) {
     if (!diagram || !nodes || !distance) return;
 
     var rect = diagram.computePartsBounds(nodes);
-    var d = distance / 2;
+    var d = distance;
 
     rect.x = rect.x - d;
     rect.y = rect.y - d;
@@ -109,6 +149,17 @@ ExpandLayout.prototype.getRect = function (diagram, nodes, distance) {
     rect.height = rect.height + d * 2;
 
     return rect;
+};
+
+ExpandLayout.prototype.getStartDistance = function (rect) {
+    if (!rect) return;
+
+    var w = rect.width;
+    var h = rect.height;
+    //var distance = rect.width < rect.height ? rect.height / 2 : rect.width / 2;
+    var distance = Math.sqrt(w * w + h * h) / 2;
+
+    return distance;
 };
 
 ExpandLayout.prototype.hasNodeAtPoint = function (diagram, location) {
@@ -218,7 +269,8 @@ function expandRelation(e, obj) {
 
     //var layout = new go.CircularLayout();
     //var layout = new go.ForceDirectedLayout();
-    var layout = new go.GridLayout();
+    //var layout = new go.GridLayout();
+    var layout = new go.TreeLayout();
     layout.doLayout(nodes);
 
     var center = currentNode.getDocumentPoint(go.Spot.Center);
