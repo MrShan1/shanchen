@@ -57,7 +57,7 @@ function createContextMenu(obj) {
                         name: 'PICTURE',
                         desiredSize: new go.Size(30, 30),
                         alignment: go.Spot.Center,
-                        source: "images/gearwheels.png",
+                        source: "images/Airplane.jpg",
                         imageStretch: go.GraphObject.UniformToFill,
                     }
                 )
@@ -67,7 +67,7 @@ function createContextMenu(obj) {
                         text: "测试1",
                         name: "BUTTON_TEXT",
                         stroke: "#fff",
-                        font: "normal 6px sans-serif",
+                        font: "normal 12px sans-serif",
                         //textAlign: "center",
                         //margin: new go.Margin(0, 20, 0, 20),
                     }
@@ -79,18 +79,18 @@ function createContextMenu(obj) {
     var dia = computeRadius(buttonTemplate);
 
     var intialAngle = 0;
-    var count = 10;
+    var count = 15;
     var angle = 360 / count;
     var sin = Math.sin(angle * Math.PI / 360);
     var radius = dia / sin;
 
     var border = buttonTemplate.findObject("ButtonBorder");
-    //border.geometryString = makeGeometryString({
-    //    angle: 0,
-    //    sweep: angle,
-    //    radius: radius,
-    //    dia: dia
-    //});
+    border.geometryString = makeGeometryString({
+        angle: 0,
+        sweep: angle,
+        radius: radius,
+        dia: dia
+    });
 
     for (var i = 0; i < count; i++) {
         var panel = buttonTemplate.copy();
