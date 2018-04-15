@@ -93,7 +93,7 @@ function createContextMenu(obj) {
         dist: dist,
     });
 
-    var radius = dist + buttonTemplate.width / 2;
+    var radius = dist + buttonTemplate.height / 2;
 
     for (var i = 0; i < count; i++) {
         var panel = buttonTemplate.copy();
