@@ -36,20 +36,20 @@ SectorContextMenu.prototype.computeAngle = function (parentAngle, parentSweepAng
     return angle;
 };
 
-SectorContextMenu.prototype.computeDistance = function (parentRadius) {
+SectorContextMenu.prototype.computeDistance = function (parentRadius, parentHeight) {
     var width = this.menuButtonTemplate.width;
-    var height = this.menuButtonTemplate.height;
+    var height = parentHeight;
     var innerRadius = parentRadius + height / 2;
     var distance = Math.sqrt(innerRadius * innerRadius - width * width / 4);
 
     return distance;
 };
 
-SectorContextMenu.prototype.computeSweepAngle = function (parentRadius) {
+SectorContextMenu.prototype.computeSweepAngle = function (parendistatRadius, parentHeight, distance) {
     var width = this.menuButtonTemplate.width;
-    var height = this.menuButtonTemplate.height;
+    var height = parentHeight;
     var innerRadius = parentRadius + height / 2;
-    var sweep = Math.asin(width / 2 / innerRadius) * 2;
+    var sweep = Math.cos(distance / innerRadius) * 2;
 
     return sweep;
 };
@@ -180,6 +180,10 @@ SectorContextMenu.prototype.createSectorGeometryString = function (distance, swe
 
     var outer = height + dist;
     var inner = dist / Math.cos(sweep * Math.PI / 360);
+    if (!this.temp) {
+        this.temp = outer - inner;
+    }
+
     var p = new go.Point(0, -outer).rotate(-sweep / 2);
     var q = new go.Point(0, -inner).rotate(sweep / 2);
     var geoString = ""
@@ -202,10 +206,11 @@ SectorContextMenu.prototype.createSectorMenuButtonTemplate = function (distance,
     return template;
 };
 
-SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngle, parentSweepAngle, parentRadius, parent) {
-    var distance = this.computeDistance(parentRadius);
-    var sweep = this.computeSweepAngle(parentRadius);
-    var sweep = 36;
+SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngle, parentSweepAngle, parentRadius, parentHeight, parent) {
+    var distance = this.computeDistance(parentRadius, parentHeight);
+    var sweep = this.computeSweepAngle(parentRadius, parentHeight, distance);
+    //var sweep = 36;
+    var tempHeight = 
     var radius = this.computeRadius(distance);
     var template = this.createSectorMenuButtonTemplate(distance, sweep);
 
