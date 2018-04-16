@@ -3,7 +3,7 @@ var $$ = go.GraphObject.make; // 简化定义模板，避免使用$（与jQuery�
 
 function SectorContextMenu(buttonDataArray) {
     this.configAdornment();
-    this.menuButtonTemplate = this.createMenuButtonTemplate();
+    this.menuButtonTemplate = this.createMenuButtonTemplate(this.initialButtonWidth, this.initialButtonHeight);
     this.makeSectorMenu(buttonDataArray);
 };
 
@@ -17,9 +17,9 @@ SectorContextMenu.prototype.funcProperty = "func";
 
 SectorContextMenu.prototype.imagePathProperty = "imagePath";
 
-SectorContextMenu.prototype.initialButtonHeight = 85;
+SectorContextMenu.prototype.initialButtonHeight = 70;
 
-SectorContextMenu.prototype.initialButtonWidth = 85;
+SectorContextMenu.prototype.initialButtonWidth = 70;
 
 SectorContextMenu.prototype.maxSweepAngle = 36;
 
@@ -75,7 +75,7 @@ SectorContextMenu.prototype.computeRadius = function (distance, height) {
 };
 
 SectorContextMenu.prototype.computeRootAngle = function (sweepAngle, index) {
-    var angle = -90 + sweepAngle * index;
+    var angle = this.startAngle + sweepAngle * index;
 
     return angle;
 };
@@ -120,7 +120,7 @@ SectorContextMenu.prototype.computeSectorDistance = function (rootOuterRadius, r
 };
 
 SectorContextMenu.prototype.computeSweepAngle = function (outerRadius) {
-    var width = this.menuButtonTemplate.width;
+    var width = this.initialButtonWidth;
     var outer = outerRadius;
     var sweep = Math.asin(width / 2 / outer) * 360 / Math.PI;
 
@@ -139,7 +139,8 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
        $$(go.Panel, "Vertical",
            {
                name: 'BUTTON_TEXT_PANEL',
-               background: "gray",
+               alignment: go.Spot.Center,
+               //background: "gray",
            }
        );
 
@@ -148,7 +149,7 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
             $$(go.Picture,
                 {
                     name: 'PICTURE',
-                    desiredSize: new go.Size(30, 30),
+                    desiredSize: new go.Size(20, 20),
                     alignment: go.Spot.Center,
                     source: imagePath,
                     imageStretch: go.GraphObject.UniformToFill,
@@ -164,8 +165,10 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
                 {
                     text: text,
                     name: "BUTTON_TEXT",
-                    stroke: "#fff",
-                    font: "normal 12px sans-serif",
+                    //stroke: "#fff",
+                    font: "bold 12px sans-serif",
+                    maxSize: new go.Size(50, 20),
+                    overflow: go.TextBlock.OverflowEllipsis
                 }
             );
 
@@ -175,11 +178,11 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
     return panel;
 };
 
-SectorContextMenu.prototype.createMenuButtonTemplate = function () {
+SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) {
     var template =
         $$("ContextMenuButton",
             {
-                desiredSize: new go.Size(85, 85),
+                desiredSize: new go.Size(width, height),
                 alignmentFocus: go.Spot.Center,
                 "ButtonBorder.stroke": "#f7f7f7",
                 "ButtonBorder.strokeWidth": 1,
@@ -197,7 +200,11 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function () {
                     });
 
                     obj.showChildren();
-                    //obj.isExpanded = true;
+
+                    //var parent = obj;
+                    //setTimeout(function () {
+                    //    parent.showChildren();
+                    //}, 300)
                 },
                 mouseLeave: function (e, obj) {
                     var border = obj.findObject("ButtonBorder");
@@ -205,13 +212,20 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function () {
                     obj.setProperties({
                         "ButtonBorder.fill": "#2786de"
                     });
-
-                    //obj.hideChildren();
-                },
-                mouseHold: function (e, obj) {
-
                 }
-            }
+            },
+            $$(go.Shape,
+                {
+                    desiredSize: new go.Size(6, 3),
+                    alignmentFocus: go.Spot.Center,
+                    alignment: go.Spot.Top,
+                    //figure: "TriangleUp",
+                    geometryString: "F M0 3 L3 0 6 3z",
+                    margin: new go.Margin(3, 0, 0, 0),
+                    stroke: "lightgray",
+                    fill: "lightgray"
+                }
+            )
         );
 
     return template;
@@ -327,7 +341,7 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
 function CustomContextMenuButton(contextMenuButton) {
     this.parent = null;
     this.children = new go.List();
-    this.isExpanded = false;
+    //this.isExpanded = false;
 };
 
 //CustomContextMenuButton.prototype = go.GraphObject.make("ContextMenuButton");
@@ -352,7 +366,7 @@ CustomContextMenuButton.prototype.hideChildren = function () {
     if (!this.children.count === 0) return;
 
     this.children.each(function (child) {
-        child.isExpanded = false;
+        child.hideChildren();
         child.visible = false;
     });
 };
@@ -363,7 +377,7 @@ CustomContextMenuButton.prototype.hideSiblingChildren = function () {
     var button = this;
     button.parent.children.each(function (child) {
         if (child !== button) {
-            child.isExpanded = false;
+            child.hideChildren();
         }
     });
 };
@@ -378,18 +392,18 @@ CustomContextMenuButton.prototype.showChildren = function () {
     });
 };
 
-Object.defineProperty(CustomContextMenuButton.prototype, "isExpanded", {
-    get: function () {
-        return isExpanded;
-    },
-    set: function (value) {
-        isExpanded = value;
+//Object.defineProperty(CustomContextMenuButton.prototype, "isExpanded", {
+//    get: function () {
+//        return isExpanded;
+//    },
+//    set: function (value) {
+//        isExpanded = value;
 
-        if (isExpanded) {
-            this.showChildren();
-        }
-        else {
-            this.hideChildren();
-        }
-    }
-});
+//        if (isExpanded) {
+//            this.showChildren();
+//        }
+//        else {
+//            this.hideChildren();
+//        }
+//    }
+//});
