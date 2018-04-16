@@ -17,11 +17,17 @@ SectorContextMenu.prototype.funcProperty = "func";
 
 SectorContextMenu.prototype.imagePathProperty = "imagePath";
 
+SectorContextMenu.prototype.initialButtonHeight = 85;
+
+SectorContextMenu.prototype.initialButtonWidth = 85;
+
 SectorContextMenu.prototype.maxSweepAngle = 36;
 
 SectorContextMenu.prototype.menuButtonTemplate = null;
 
 SectorContextMenu.prototype.minDistance = 20;
+
+SectorContextMenu.prototype.sectorDistance = 0;
 
 SectorContextMenu.prototype.startAngle = -90;
 
@@ -36,26 +42,33 @@ SectorContextMenu.prototype.computeAngle = function (parentAngle, parentSweepAng
     return angle;
 };
 
-SectorContextMenu.prototype.computeDistance = function (parentRadius, parentHeight) {
-    var width = this.menuButtonTemplate.width;
-    var height = parentHeight;
-    var innerRadius = parentRadius + height / 2;
-    var distance = Math.sqrt(innerRadius * innerRadius - width * width / 4);
+SectorContextMenu.prototype.computeDistance = function (innerRadius, sweepAngle) {
+    var inner = innerRadius;
+    var sweep = sweepAngle;
+    var distance = Math.cos(sweep * Math.PI / 360) * inner;
 
     return distance;
 };
 
-SectorContextMenu.prototype.computeSweepAngle = function (parendistatRadius, parentHeight, distance) {
-    var width = this.menuButtonTemplate.width;
-    var height = parentHeight;
-    var innerRadius = parentRadius + height / 2;
-    var sweep = Math.cos(distance / innerRadius) * 2;
+SectorContextMenu.prototype.computeHeight = function (outerRadius, distance) {
+    var height = outerRadius - distance;
 
-    return sweep;
+    return height;
 };
 
-SectorContextMenu.prototype.computeRadius = function (distance) {
-    var height = this.menuButtonTemplate.height;
+SectorContextMenu.prototype.computeInnerRadius = function (parentRadius, parentHeight) {
+    var radius = parentRadius + parentHeight / 2;
+
+    return radius;
+};
+
+SectorContextMenu.prototype.computeOuterRadius = function (innerRadius) {
+    var radius = innerRadius + this.sectorDistance;
+
+    return radius;
+};
+
+SectorContextMenu.prototype.computeRadius = function (distance, height) {
     var radius = distance + height / 2;
 
     return radius;
@@ -69,12 +82,26 @@ SectorContextMenu.prototype.computeRootAngle = function (sweepAngle, index) {
 
 SectorContextMenu.prototype.computeRootDistance = function (sweepAngle) {
     var minDistance = this.minDistance;
-    var width = this.menuButtonTemplate.width;
-    var height = this.menuButtonTemplate.height;
+    var width = this.initialButtonWidth;
+    var height = this.initialButtonHeight;
     var sweep = sweepAngle;
     var distance = width / (2 * Math.sin(sweep * Math.PI / 360)) - height;
 
     return distance > minDistance ? distance : minDistance;
+};
+
+SectorContextMenu.prototype.computeRootInnerRadius = function (distance, sweepAngle) {
+    var dist = distance;
+    var sweep = sweepAngle;
+    var radius = dist / Math.cos(sweep * Math.PI / 360);
+
+    return radius;
+};
+
+SectorContextMenu.prototype.computeRootOuterRadius = function (distance) {
+    var radius = distance + this.initialButtonHeight;
+
+    return radius;
 };
 
 SectorContextMenu.prototype.computeRootSweepAngle = function (count) {
@@ -82,6 +109,22 @@ SectorContextMenu.prototype.computeRootSweepAngle = function (count) {
     var sweep = 360 / count;
 
     return sweep < maxSweep ? sweep : maxSweep;
+};
+
+SectorContextMenu.prototype.computeSectorDistance = function (rootOuterRadius, rootInnerRadius) {
+    var outer = rootOuterRadius;
+    var inner = rootInnerRadius;
+    var sectorDistance = outer - inner;
+
+    return sectorDistance;
+};
+
+SectorContextMenu.prototype.computeSweepAngle = function (outerRadius) {
+    var width = this.menuButtonTemplate.width;
+    var outer = outerRadius;
+    var sweep = Math.asin(width / 2 / outer) * 360 / Math.PI;
+
+    return sweep;
 };
 
 SectorContextMenu.prototype.configAdornment = function () {
@@ -154,6 +197,7 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function () {
                     });
 
                     obj.showChildren();
+                    //obj.isExpanded = true;
                 },
                 mouseLeave: function (e, obj) {
                     var border = obj.findObject("ButtonBorder");
@@ -173,16 +217,11 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function () {
     return template;
 };
 
-SectorContextMenu.prototype.createSectorGeometryString = function (distance, sweepAngle) {
-    var height = this.menuButtonTemplate.height;
-    var dist = distance;
+SectorContextMenu.prototype.createSectorGeometryString = function (outerRadius, innerRadius, sweepAngle) {
+    var outer = outerRadius;
+    var inner = innerRadius;
     var sweep = sweepAngle;
 
-    var outer = height + dist;
-    var inner = dist / Math.cos(sweep * Math.PI / 360);
-    if (!this.temp) {
-        this.temp = outer - inner;
-    }
 
     var p = new go.Point(0, -outer).rotate(-sweep / 2);
     var q = new go.Point(0, -inner).rotate(sweep / 2);
@@ -197,22 +236,24 @@ SectorContextMenu.prototype.createSectorGeometryString = function (distance, swe
     return geoString;
 };
 
-SectorContextMenu.prototype.createSectorMenuButtonTemplate = function (distance, sweepAngle) {
+SectorContextMenu.prototype.createSectorMenuButtonTemplate = function (outerRadius, innerRadius, height, sweepAngle) {
     var template = this.menuButtonTemplate.copy();
-    var border = template.findObject("ButtonBorder");
+    template.desiredSize.setTo(this.initialButtonWidth, height);
 
-    border.geometryString = this.createSectorGeometryString(distance, sweepAngle);
+    var border = template.findObject("ButtonBorder");
+    border.geometryString = this.createSectorGeometryString(outerRadius, innerRadius, sweepAngle);
 
     return template;
 };
 
 SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngle, parentSweepAngle, parentRadius, parentHeight, parent) {
-    var distance = this.computeDistance(parentRadius, parentHeight);
-    var sweep = this.computeSweepAngle(parentRadius, parentHeight, distance);
-    //var sweep = 36;
-    var tempHeight = 
-    var radius = this.computeRadius(distance);
-    var template = this.createSectorMenuButtonTemplate(distance, sweep);
+    var innerRadius = this.computeInnerRadius(parentRadius, parentHeight);
+    var outerRadius = this.computeOuterRadius(innerRadius);
+    var sweep = this.computeSweepAngle(outerRadius);
+    var distance = this.computeDistance(innerRadius, sweep);
+    var height = this.computeHeight(outerRadius, distance);
+    var radius = this.computeRadius(distance, height);
+    var template = this.createSectorMenuButtonTemplate(outerRadius, innerRadius, height, sweep);
 
     for (var i = 0; i < buttonDataArray.length; i++) {
         var buttonData = buttonDataArray[i];
@@ -225,10 +266,15 @@ SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngl
 SectorContextMenu.prototype.makeSectorMenu = function (buttonDataArray) {
     if (!buttonDataArray || buttonDataArray.length === 0) return;
 
+    var height = this.initialButtonHeight;
     var sweep = this.computeRootSweepAngle(buttonDataArray.length);
     var distance = this.computeRootDistance(sweep);
-    var radius = this.computeRadius(distance);
-    var template = this.createSectorMenuButtonTemplate(distance, sweep);
+    var innerRadius = this.computeRootInnerRadius(distance, sweep);
+    var outerRadius = this.computeRootOuterRadius(distance);
+    var radius = this.computeRadius(distance, height);
+    var template = this.createSectorMenuButtonTemplate(outerRadius, innerRadius, height, sweep);
+
+    this.sectorDistance = this.computeSectorDistance(outerRadius, innerRadius);
 
     for (var i = 0; i < buttonDataArray.length; i++) {
         var buttonData = buttonDataArray[i];
@@ -246,8 +292,10 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
     var func = buttonData[this.funcProperty];
     var offsetX = Math.cos(angle * Math.PI / 180) * radius;
     var offsetY = Math.sin(angle * Math.PI / 180) * radius;
+    var height = menuButton.height;
 
     new CustomContextMenuButton().adorn(menuButton);
+    //menuButton.children = new go.List();
 
     var infoPanel = this.createInfoPanel(imagePath, text);
     if (infoPanel) {
@@ -263,20 +311,22 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
 
     menuButton.alignment = new go.Spot(0.5, 0.5, offsetX, offsetY);
 
-    //menuButton.visible = (parent instanceof go.Adornment);
-    menuButton.visible = true;
+    menuButton.visible = (parent instanceof go.Adornment);
+    //menuButton.visible = true;
 
     menuButton.parent = parent;
     parent.children.add(menuButton);
     this.add(menuButton);
 
     if (buttonData.children && buttonData.children.length > 0) {
-        this.makeChildren(buttonData.children, angle, sweep, radius, menuButton);
+        this.makeChildren(buttonData.children, angle, sweep, radius, height, menuButton);
     }
 };
 
 
 function CustomContextMenuButton(contextMenuButton) {
+    this.parent = null;
+    this.children = new go.List();
     this.isExpanded = false;
 };
 
@@ -284,9 +334,9 @@ function CustomContextMenuButton(contextMenuButton) {
 
 //CustomContextMenuButton.prototype.constructor = CustomContextMenuButton;
 
-CustomContextMenuButton.prototype.children = new go.List();
+//CustomContextMenuButton.prototype.children = new go.List();
 
-CustomContextMenuButton.prototype.parent = null;
+//CustomContextMenuButton.prototype.parent = null;
 
 CustomContextMenuButton.prototype.adorn = function (target) {
     if (!target) return;
@@ -294,20 +344,16 @@ CustomContextMenuButton.prototype.adorn = function (target) {
     for (var i in this) {
         target[i] = this[i];
     }
-};
 
-CustomContextMenuButton.prototype.expand = function () {
-    this.hideSiblingChildren();
-
-    this.showChildren();
+    target.isExpanded = this.isExpanded;
 };
 
 CustomContextMenuButton.prototype.hideChildren = function () {
     if (!this.children.count === 0) return;
 
     this.children.each(function (child) {
-        child.visible = false;
         child.isExpanded = false;
+        child.visible = false;
     });
 };
 
@@ -317,13 +363,15 @@ CustomContextMenuButton.prototype.hideSiblingChildren = function () {
     var button = this;
     button.parent.children.each(function (child) {
         if (child !== button) {
-            child.hideChildren();
+            child.isExpanded = false;
         }
     });
 };
 
 CustomContextMenuButton.prototype.showChildren = function () {
     if (!this.children.count === 0) return;
+
+    this.hideSiblingChildren();
 
     this.children.each(function (child) {
         child.visible = true;
@@ -337,7 +385,10 @@ Object.defineProperty(CustomContextMenuButton.prototype, "isExpanded", {
     set: function (value) {
         isExpanded = value;
 
-        if (!isExpanded) {
+        if (isExpanded) {
+            this.showChildren();
+        }
+        else {
             this.hideChildren();
         }
     }
