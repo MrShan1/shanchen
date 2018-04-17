@@ -165,8 +165,9 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
                 {
                     text: text,
                     name: "BUTTON_TEXT",
-                    //stroke: "#fff",
-                    font: "bold 12px sans-serif",
+                    stroke: "#fff",
+                    font: "normal 10px sans-serif",
+                    margin: new go.Margin(2, 0, 0, 0),
                     maxSize: new go.Size(50, 20),
                     overflow: go.TextBlock.OverflowEllipsis
                 }
@@ -186,31 +187,26 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
                 alignmentFocus: go.Spot.Center,
                 "ButtonBorder.stroke": "#f7f7f7",
                 "ButtonBorder.strokeWidth": 1,
-                "ButtonBorder.fill": "#2786de",
+                //"ButtonBorder.fill": "#4b51d0",
+                "ButtonBorder.fill": "#008feb",
                 "ButtonBorder.figure": "Rectangle",
                 visible: false,
                 mouseEnter: function (e, obj) {
                     obj.setProperties({
-                        "ButtonBorder.fill": $$(go.Brush, "Linear",
-                            {
-                                0: "#2786de",
-                                1: "#92a6d0"
-                            }
-                        )
+                        //"ButtonBorder.fill": $$(go.Brush, "Linear",
+                        //    {
+                        //        0: "#2786de",
+                        //        1: "#92a6d0"
+                        //    }
+                        //),
+                        "ButtonBorder.fill": "#4b51d0"
                     });
 
                     obj.showChildren();
-
-                    //var parent = obj;
-                    //setTimeout(function () {
-                    //    parent.showChildren();
-                    //}, 300)
                 },
                 mouseLeave: function (e, obj) {
-                    var border = obj.findObject("ButtonBorder");
-                    border.fill = "#2786de";
                     obj.setProperties({
-                        "ButtonBorder.fill": "#2786de"
+                        "ButtonBorder.fill": "#008feb"
                     });
                 }
             },
