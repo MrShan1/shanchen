@@ -193,12 +193,13 @@
               $(go.Node, "Auto",
                 {
                     locationSpot: go.Spot.Center,
-                    //contextClick: function (e, obj) {
-                    //    obj.contextMenu = createContextMenu();
-                    //    obj.contextMenu.visible = true;
+                    contextClick: function (e, obj) {
+                        obj.contextMenu.children.each(function (child) {
+                            child.hideChildren();
+                        });
 
-                    //    return;
-                    //}
+                        return;
+                    }
                 },
                 $(go.Shape, "RoundedRectangle",
                   {

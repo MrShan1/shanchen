@@ -212,6 +212,7 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
             },
             $$(go.Shape,
                 {
+                    name: "ExpandShape",
                     desiredSize: new go.Size(6, 3),
                     alignmentFocus: go.Spot.Center,
                     alignment: go.Spot.Top,
@@ -219,7 +220,8 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
                     geometryString: "F M0 3 L3 0 6 3z",
                     margin: new go.Margin(3, 0, 0, 0),
                     stroke: "lightgray",
-                    fill: "lightgray"
+                    fill: "lightgray",
+                    visible: false,
                 }
             )
         );
@@ -329,6 +331,8 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
     this.add(menuButton);
 
     if (buttonData.children && buttonData.children.length > 0) {
+        menuButton.findObject("ExpandShape").visible = true;
+
         this.makeChildren(buttonData.children, angle, sweep, radius, height, menuButton);
     }
 };
