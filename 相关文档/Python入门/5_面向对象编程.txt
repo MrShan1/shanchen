@@ -1,0 +1,102 @@
+# 类和实例
+class Student(object):
+    def __init__(self, name, score):
+        self.name = name
+        self.score = score
+    def print_score(self):
+        return '%s: %s' % (self.name, self.score)
+    def get_grade(self):
+        if self.score >= 90:
+            return 'A'
+        elif self.score >= 60:
+            return 'B'
+        else:
+            return 'C'
+
+bart = Student('Bart Simpson', 59)
+lisa = Student('Lisa Simpson', 87)
+print bart.name, bart.score, bart.print_score(), bart.get_grade()
+print lisa.name, lisa.score, lisa.print_score(), lisa.get_grade()
+bart.age = 8      # Python允许对实例变量绑定任何数据
+bart.age
+lisa.age          # 同一个类的不同实例拥有的变量名称可能不同
+
+
+
+# 访问限制
+class Student(object):
+    # 变量名类似__xxx__的，以双下划线开头以双下划线结尾的是特殊变量，是可以直接访问的
+    def __init__(self, name, score):
+        self.__name = name    # 以__开头的实例的变量名为私有变量（private）
+        self.__score = score  # 只有内部可以访问，外部不能访问
+    def print_score(self):
+        return '%s: %s' % (self.__name, self.__score)
+    def get_score(self):        # 增加get/set方法访问私有变量
+        return self.__score
+    def set_score(self, score): # 可对参数做检查，避免传入无效参数
+        self.__score = score
+
+bart = Student('Bart Simpson', 98)
+bart.__name
+
+bart._Student__name   # 解释器对外把__name变量改成了_Student__name
+# 但是强烈建议你不要这么干，因为不同版本的Python解释器可能会把__name改成不同的变量名
+
+
+# 继承和多态
+class Animal(object):
+    # 任何时候，如果没有合适的类可以继承，就继承自object类
+    def run(self):
+        print 'Animal is running...'
+class Dog(Animal):
+    def run(self):  # 子类的run()覆盖了父类的run()
+        print 'Dog is running...'
+    def eat(self):  # 对子类增加一些方法
+        print 'Eating meat...'
+class Cat(Animal):
+    def run(self):
+        print 'Cat is running...'
+class Husky(Dog):
+    def run(self):  # 多态
+        print 'Husky is running...'
+
+def run_twice(animal):
+    animal.run()
+    animal.run()
+run_twice(Animal())
+run_twice(Dog())
+run_twice(Husky())
+
+
+# 获取对象信息
+type('str')
+type(abs)
+import types
+type('abc')==types.StringType
+type(u'abc')==types.UnicodeType
+type([])==types.ListType
+type(str)==types.TypeType  # 所有类型本身的类型就是TypeType
+type(int)==type(str)==types.TypeType
+
+a, d, h = Animal(), Dog(), Husky()
+print isinstance(h, Husky), isinstance(h, Dog), isinstance(h, Animal)
+print isinstance('a', (str, unicode))  # 判断一个变量是否是某些类型中的一种
+
+dir('ABC')  # 获得一个对象的所有属性和方法
+class MyObject(object):
+    def __init__(self):
+        self.x = 9
+    def power(self):
+        return self.x * self.x
+obj = MyObject()
+hasattr(obj, 'x')          # 有属性'x'吗？
+hasattr(obj, 'y')          # 有属性'y'吗？
+setattr(obj, 'y', 19)      # 设置一个属性'y'
+hasattr(obj, 'y')          # 有属性'y'吗？
+getattr(obj, 'y')          # 获取属性'y'
+getattr(obj, 'z')          # 获取属性'z'
+getattr(obj, 'z', 404)     # 获取属性'z'，如果不存在，返回默认值404
+hasattr(obj, 'power')      # 有属性'power'吗？
+fn = getattr(obj, 'power') # 获取属性'power'并赋值到变量fn
+fn                         # fn指向obj.power
+fn()                       # 调用fn()与调用obj.power()是一样的
