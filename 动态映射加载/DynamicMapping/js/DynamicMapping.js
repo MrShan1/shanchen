@@ -33,7 +33,7 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 1000, 1000);
+    generateNodes(wholeDiagram.model, 2000, 2000);
     generateLinks(wholeDiagram.model, 5, 5);
 
     //wholeDiagram.layoutDiagram(true);
@@ -53,7 +53,11 @@ function layout() {
     //console.log(endTime - startTime);
     alert(endTime - startTime);
 
-    dynamicMapping();
+    dynamicInsert();
+
+    dynamicDelete();
+
+    showCount();
 };
 
 function generateNodes(model, min, max) {
@@ -151,9 +155,9 @@ function createDiagram() {
 };
 
 function createWholeDiagram() {
-    var div = document.createElement("div");
-    div.id = "tempDiv";
-    div.style.visibility = "hidden";
+    //var div = document.createElement("div");
+    //div.id = "tempDiv";
+    //div.style.visibility = "hidden";
     //div.style.cssText += "height: 300px; width: 300px; background-color: wheat;";
     //document.body.appendChild(div);
 
@@ -172,7 +176,7 @@ function createWholeDiagram() {
             }
         );
 
-    wholeDiagram.div = div;
+    //wholeDiagram.div = div;
 
     wholeDiagram.model = new go.GraphLinksModel();
 
@@ -203,24 +207,81 @@ function createWholeDiagram() {
         );
 };
 
-function dynamicMapping() {
-    setInterval(function () {
-        diagram.fixedBounds = wholeDiagram.documentBounds;
+function dynamicInsert() {
+    requestAnimationFrame(dynamicInsert);
 
-        var bounds = diagram.viewportBounds;
-        var coll = wholeDiagram.findObjectsIn(bounds);
+    diagram.fixedBounds = wholeDiagram.documentBounds;
 
-        coll.each(function (obj) {
-            var part = obj.part;
-            if (part.data && !diagram.findNodeForKey(part.data.key)) {
-                if (part instanceof go.Node) {
-                    diagram.model.addNodeData(part.data);
-                }
-                else if (part instanceof go.Link) {
-                    diagram.model.addLinkData(part.data);
-                }
+    var bounds = diagram.viewportBounds;
+    var coll = wholeDiagram.findObjectsIn(bounds);
+    var nodes = [];
+    var links = [];
+
+    coll.each(function (obj) {
+        var part = obj.part;
+        if (part.data) {
+            if (part instanceof go.Node && !diagram.findNodeForData(part.data)) {
+                nodes.push(part.data);
             }
-        });
+            else if (part instanceof go.Link && !diagram.findLinkForData(part.data)) {
+                links.push(part.data);
+            }
+        }
+        
+    });
 
-    }, 500);
+    diagram.model.addNodeDataCollection(nodes);
+    diagram.model.addLinkDataCollection(links);
+};
+
+function dynamicDelete() {
+    requestAnimationFrame(dynamicDelete);
+
+    var bounds = diagram.viewportBounds;
+    var nodes = new go.Set();
+    var links = new go.Set();
+
+    diagram.nodes.each(function (node) {
+        if (!node.actualBounds.intersectsRect(bounds)) {
+            if (!node.linksConnected.any(function (otherNode) { return otherNode.actualBounds.intersectsRect(bounds); })) {
+                nodes.add(node.data);
+                node.linksConnected.each(function (link) {
+                    links.add(link.data);
+                });
+            }
+        }
+    });
+
+    diagram.model.removeNodeDataCollection(nodes.toArray());
+    diagram.model.removeLinkDataCollection(links.toArray());
+};
+
+function isNodeIntersectsRect(node, rect) {
+    var isIntersect = node.actualBounds.intersectsRect(rect);
+
+    return isIntersect;
+};
+
+function isLinkIntersectsRect(link, rect) {
+    var isIntersect = false;
+    var unionRect = new go.Rect().set(link.fromNode.actualBounds).unionRect(link.toNode.actualBounds);
+    isIntersect = unionRect.intersectsRect(rect);
+
+    return isIntersect;
+};
+
+function showCount() {
+    requestAnimationFrame(showCount);
+
+    document.getElementById("nodesCount").innerHTML = diagram.nodes.count;
+    document.getElementById("linksCount").innerHTML = diagram.links.count;
+};
+
+function doTreeLayout() {
+    var layout = new go.TreeLayout();
+    layout.isOngoing = false;
+    layout.isInitial = false;
+
+    wholeDiagram.layout = layout;
+    wholeDiagram.layoutDiagram(true);
 };
