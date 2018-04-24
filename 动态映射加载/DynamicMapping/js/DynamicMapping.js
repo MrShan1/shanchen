@@ -33,7 +33,7 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 2000, 2000);
+    generateNodes(wholeDiagram.model, 3000, 3000);
     generateLinks(wholeDiagram.model, 5, 5);
 
     //wholeDiagram.layoutDiagram(true);
@@ -283,5 +283,9 @@ function doTreeLayout() {
     layout.isInitial = false;
 
     wholeDiagram.layout = layout;
+    wholeDiagram.layoutDiagram(true);
+};
+
+function doLayout() {
     wholeDiagram.layoutDiagram(true);
 };
