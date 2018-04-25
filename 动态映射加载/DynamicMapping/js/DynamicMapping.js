@@ -33,8 +33,8 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 3000, 3000);
-    generateLinks(wholeDiagram.model, 5, 5);
+    generateNodes(wholeDiagram.model, 80, 80);
+    generateLinks(wholeDiagram.model, 80, 80);
 
     //wholeDiagram.layoutDiagram(true);
 
@@ -155,12 +155,6 @@ function createDiagram() {
 };
 
 function createWholeDiagram() {
-    //var div = document.createElement("div");
-    //div.id = "tempDiv";
-    //div.style.visibility = "hidden";
-    //div.style.cssText += "height: 300px; width: 300px; background-color: wheat;";
-    //document.body.appendChild(div);
-
     wholeDiagram =
         $(go.Diagram,
             {
@@ -176,7 +170,11 @@ function createWholeDiagram() {
             }
         );
 
+    //var div = document.createElement("div");
+    //div.id = "tempDiv";
+    //div.style.display = "none";
     //wholeDiagram.div = div;
+    //document.body.appendChild(div);
 
     wholeDiagram.model = new go.GraphLinksModel();
 
@@ -227,7 +225,7 @@ function dynamicInsert() {
                 links.push(part.data);
             }
         }
-        
+
     });
 
     diagram.model.addNodeDataCollection(nodes);
