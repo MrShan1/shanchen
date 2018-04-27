@@ -33,8 +33,8 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 80, 80);
-    generateLinks(wholeDiagram.model, 80, 80);
+    generateNodes(wholeDiagram.model, 3000, 3000);
+    generateLinks(wholeDiagram.model, 1, 5);
 
     //wholeDiagram.layoutDiagram(true);
 
@@ -162,10 +162,40 @@ function createWholeDiagram() {
                 layout:
                     $(go.ForceDirectedLayout,
                         {
-                            isInitial: true,
+                            isInitial: false,
                             isOngoing: false
                         }
                     ),
+                //layout:
+                //    $(go.CircularLayout,
+                //        {
+                //            isInitial: false,
+                //            isOngoing: false,
+                //            sorting: go.CircularLayout.Forwards
+                //        }
+                //    ),
+                //layout:
+                //    $(go.LayeredDigraphLayout,
+                //        {
+                //            isInitial: false,
+                //            isOngoing: false,
+                //        }
+                //    ),
+                //layout:
+                //    $(go.TreeLayout,
+                //        {
+                //            isInitial: false,
+                //            isOngoing: false
+                //        }
+                //    ),
+                //layout:
+                //    $(go.GridLayout,
+                //        {
+                //            isInitial: false,
+                //            isOngoing: false,
+                //            wrappingColumn: 10
+                //        }
+                //    ),
                 "undoManager.isEnabled": false
             }
         );
