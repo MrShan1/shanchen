@@ -33,8 +33,8 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 3000, 3000);
-    generateLinks(wholeDiagram.model, 1, 5);
+    generateNodes(wholeDiagram.model, 1000, 1000);
+    generateLinks(wholeDiagram.model, 5, 5);
 
     //wholeDiagram.layoutDiagram(true);
 
@@ -53,11 +53,11 @@ function layout() {
     //console.log(endTime - startTime);
     alert(endTime - startTime);
 
-    dynamicInsert();
+    //dynamicInsert();
 
-    dynamicDelete();
+    //dynamicDelete();
 
-    showCount();
+    //showCount();
 };
 
 function generateNodes(model, min, max) {
@@ -157,8 +157,9 @@ function createDiagram() {
 function createWholeDiagram() {
     wholeDiagram =
         $(go.Diagram,
+            //"wholeDiagramDiv",
             {
-                contentAlignment: go.Spot.Center,
+                //contentAlignment: go.Spot.Center,
                 layout:
                     $(go.ForceDirectedLayout,
                         {
@@ -196,7 +197,8 @@ function createWholeDiagram() {
                 //            wrappingColumn: 10
                 //        }
                 //    ),
-                "undoManager.isEnabled": false
+                "undoManager.isEnabled": false,
+                "animationManager.isEnabled": false
             }
         );
 
@@ -212,12 +214,18 @@ function createWholeDiagram() {
         $(go.Node, "Auto",
             {
                 width: 70,
-                height: 20
+                height: 20,
+                //visible: false
             },
             new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
             $(go.Shape, "Rectangle",
+                {
+
+                }
+                ,
                 new go.Binding("fill", "color")
-            ),
+            )
+            ,
             $(go.TextBlock,
                 {
                     margin: 2
@@ -229,7 +237,7 @@ function createWholeDiagram() {
     wholeDiagram.linkTemplate =
         $(go.Link,
             {
-
+                //visible: false
             },
             $(go.Shape)
         );
