@@ -1,0 +1,302 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B5FF55DF-26AA-4189-AF0B-C661118FD00F}</ProjectGuid>
+    <ProjectTypeGuids>{A1591282-1198-4647-A2B1-27E5FF5F6F3B};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ChenRui.SL.Diagram.Layout</RootNamespace>
+    <AssemblyName>ChenRui.SL.Diagram.Layout</AssemblyName>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v5.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <!-- This property group is only here to support building this project using the 
+       MSBuild 3.5 toolset. In order to work correctly with this older toolset, it needs 
+       to set the TargetFrameworkVersion to v3.5 -->
+  <PropertyGroup Condition="'$(MSBuildToolsVersion)' == '3.5'">
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp, Version=5.0.5.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="mscorlib" />
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Browser" />
+    <Reference Include="Telerik.Windows.Controls">
+      <HintPath>..\..\DLLs\RadDLLs\Rad.Controls\Telerik.Windows.Controls.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.Windows.Controls.Input">
+      <HintPath>..\..\DLLs\RadDLLs\Rad.Controls\Telerik.Windows.Controls.Input.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Config\ConfigKeyInfo.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedMatrixLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedVerticalLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedHorizontalLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedCircleLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedRingLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedBowLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedSectorLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedHelixLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\IGroupProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\ArrangeGroupLayoutProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\AdvancedLayouts\AdvancedLayeredLayout.cs" />
+    <Compile Include="Layout\AdvancedLayout\RadialArrangeGroupLayoutProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\DefaultGroupLayoutProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\StraightLinearArrangeGroupLayoutProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\MoneyGroupLayout.cs" />
+    <Compile Include="Layout\EmptyLayout.cs" />
+    <Compile Include="Layout\LayoutArithmetic\VerticalLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\HorizontalLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\RingLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\BowLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\SectorLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\HelixLayoutArithmetic.cs" />
+    <Compile Include="Layout\NodeHost.cs" />
+    <Compile Include="Layout\AdvancedLayout\Group.cs" />
+    <Compile Include="Layout\AdvancedLayout\GroupCollection.cs" />
+    <Compile Include="Layout\AdvancedLayout\IGroupProviderFactory.cs" />
+    <Compile Include="Layout\AdvancedLayout\NormalGroupLayoutProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\IGroupLayoutProvider.cs" />
+    <Compile Include="Layout\AdvancedLayout\LinearArrangeGroupLayoutProvider.cs" />
+    <Compile Include="Layout\NodeHostCollection.cs" />
+    <Compile Include="Layout\CustomizedLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\BowLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\EnumCenterNodePlacement.cs" />
+    <Compile Include="Layout\CustomizedLayouts\HorizontalLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\VerticalLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\CircleLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\SectorLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\MatrixLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\RingLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\HelixLayout.cs" />
+    <Compile Include="Layout\GoXamLayouts\ForceDirectedLayout.cs" />
+    <Compile Include="Layout\GoXamLayouts\CircularLayout.cs" />
+    <Compile Include="Layout\GoXamLayouts\GridLayout.cs" />
+    <Compile Include="Layout\GoXamLayouts\LayeredDigraphLayout.cs" />
+    <Compile Include="Layout\GoXamLayouts\TreeLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\CustomizedLayout.cs" />
+    <Compile Include="Layout\CustomizedLayouts\ISpecialNodesProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\ISpecialNodes.cs" />
+    <Compile Include="Layout\ILocation.cs" />
+    <Compile Include="Layout\ILocationProvider.cs" />
+    <Compile Include="Layout\LayoutArithmetic\ILayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\CircleLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\MatrixLayoutArithmetic.cs" />
+    <Compile Include="Layout\LayoutArithmetic\LayoutArithmetic.cs" />
+    <Compile Include="Layout\AutoLocationProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\SpecialNodesProviders\MaxLinkCountNodeCenterNodeProvider.cs" />
+    <Compile Include="Layout\DefaultLocationProvider.cs" />
+    <Compile Include="Layout\IReferenceNodes.cs" />
+    <Compile Include="Layout\IReferenceNodesProvider.cs" />
+    <Compile Include="Layout\LayoutResult.cs" />
+    <Compile Include="Layout\DefaultReferenceNodesProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\IModelTransform.cs" />
+    <Compile Include="Layout\SingleReferenceNodesProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\EnumCenterNodeType.cs" />
+    <Compile Include="Layout\CustomizedLayouts\SpecialNodesProviders\FirstNodeCenterNodeProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\SpecialNodesProviders\LastNodeCenterNodeProvider.cs" />
+    <Compile Include="Layout\CustomizedLayouts\SpecialNodesProviders\CenterNodeCenterNodeProvider.cs" />
+    <Compile Include="Layout\ILayoutConfig.cs" />
+    <Compile Include="Layout\INeedRevert.cs" />
+    <Compile Include="LocalizedStrings.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resource.Designer.cs">
+      <DependentUpon>Resource.resx</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="ViewModel\BowLayoutConfig.cs" />
+    <Compile Include="ViewModel\ForceDirectedLayoutConfig.cs" />
+    <Compile Include="ViewModel\LayoutConfig.cs" />
+    <Compile Include="ViewModel\HorizontalLayoutConfig.cs" />
+    <Compile Include="ViewModel\VerticalLayoutConfig.cs" />
+    <Compile Include="ViewModel\CircleLayoutConfig.cs" />
+    <Compile Include="ViewModel\MatrixLayoutConfig.cs" />
+    <Compile Include="ViewModel\RingLayoutConfig.cs" />
+    <Compile Include="ViewModel\SectorLayoutConfig.cs" />
+    <Compile Include="ViewModel\HelixLayoutConfig.cs" />
+    <Compile Include="ViewModel\AdvancedLayoutConfig.cs" />
+    <Compile Include="ViewModel\LayeredDigraphLayoutConfig.cs" />
+    <Compile Include="ViewModel\TreeLayoutConfig.cs" />
+    <Compile Include="View\BowLayoutConfig.xaml.cs">
+      <DependentUpon>BowLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\LayoutConfig.cs" />
+    <Compile Include="View\ForceDirectedLayoutConfig.xaml.cs">
+      <DependentUpon>ForceDirectedLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\AdvancedLayoutConfig.xaml.cs">
+      <DependentUpon>AdvancedLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\HorizontalLayoutConfig.xaml.cs">
+      <DependentUpon>HorizontalLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\CircleLayoutConfig.xaml.cs">
+      <DependentUpon>CircleLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\MatrixLayoutConfig.xaml.cs">
+      <DependentUpon>MatrixLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\RingLayoutConfig.xaml.cs">
+      <DependentUpon>RingLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\SectorLayoutConfig.xaml.cs">
+      <DependentUpon>SectorLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\HelixLayoutConfig.xaml.cs">
+      <DependentUpon>HelixLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\VerticalLayoutConfig.xaml.cs">
+      <DependentUpon>VerticalLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\LayeredDigraphLayoutConfig.xaml.cs">
+      <DependentUpon>LayeredDigraphLayoutConfig.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\TreeLayoutConfig.xaml.cs">
+      <DependentUpon>TreeLayoutConfig.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ChenRui.SL.AnalysisDiagram.Models\ChenRui.SL.AnalysisDiagram.Models.csproj">
+      <Project>{e7be9527-0270-418d-a8bb-a21dad6c7875}</Project>
+      <Name>ChenRui.SL.AnalysisDiagram.Models</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ChenRui.SL.Common\ChenRui.SL.Common.csproj">
+      <Project>{60F0A009-2A9D-4FBD-97CA-0E87A96FB3EA}</Project>
+      <Name>ChenRui.SL.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ChenRui.SL.Configuration\ChenRui.SL.Configuration.csproj">
+      <Project>{042ED56F-9784-40CD-9AC6-7891303CA96E}</Project>
+      <Name>ChenRui.SL.Configuration</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ChenRui.SL.Controls\ChenRui.SL.Controls.csproj">
+      <Project>{AEA8A6B2-42A1-421F-BF1C-BE6C8D1C0978}</Project>
+      <Name>ChenRui.SL.Controls</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ChenRui.SL.Interface\ChenRui.SL.Interface.csproj">
+      <Project>{13f57a33-94ed-4586-9b64-48252cdc809d}</Project>
+      <Name>ChenRui.SL.Interface</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ChenRui.SL.PresentationCommon\ChenRui.SL.PresentationCommon.csproj">
+      <Project>{8606E882-0E08-4D5C-9BF0-FAA2F0E08D19}</Project>
+      <Name>ChenRui.SL.PresentationCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GoSilverlight\GoSilverlight.csproj">
+      <Project>{C117B8EB-726E-4BAF-9416-FFC79CFA263B}</Project>
+      <Name>GoSilverlight</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="View\BowLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\ForceDirectedLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\AdvancedLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\HorizontalLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\CircleLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\MatrixLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\RingLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\SectorLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\HelixLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\VerticalLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\LayeredDigraphLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\TreeLayoutConfig.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resource.zh-Hans.resx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Layout\AdvancedLayout\IGroupTransformProvider.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Silverlight\$(SilverlightVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{A1591282-1198-4647-A2B1-27E5FF5F6F3B}">
+        <SilverlightProjectProperties />
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

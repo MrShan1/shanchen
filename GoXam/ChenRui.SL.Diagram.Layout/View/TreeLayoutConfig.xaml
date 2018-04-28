@@ -1,0 +1,126 @@
+﻿<view:LayoutConfig x:Class="ChenRui.SL.Diagram.Layout.View.TreeLayoutConfig"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:rad="http://schemas.telerik.com/2008/xaml/presentation"
+    xmlns:local="clr-namespace:ChenRui.SL.Diagram.Layout"
+    xmlns:view="clr-namespace:ChenRui.SL.Diagram.Layout.View"
+    xmlns:ctrl="clr-namespace:ChenRui.SL.Controls;assembly=ChenRui.SL.Controls"
+    mc:Ignorable="d"
+    d:DesignHeight="300" d:DesignWidth="400">
+    <UserControl.Resources>
+        <local:LocalizedStrings x:Key="localizedStrings" />
+    </UserControl.Resources>
+    <Grid x:Name="LayoutRoot">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Margin="2" Text="{Binding Resource.TreeStyle, Source={StaticResource localizedStrings}}" VerticalAlignment="Center" />
+        <rad:RadComboBox Grid.Column="1" Margin="2" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding TreeStyles}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding TreeStyle, Mode=TwoWay}" SelectionChanged="RadComboBox_SelectionChanged" />
+        <TextBlock Grid.Row="1" Margin="2" Text="{Binding Resource.Angle, Source={StaticResource localizedStrings}}" VerticalAlignment="Center" />
+        <rad:RadComboBox Grid.Column="1" Grid.Row="1" Margin="2" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Angles}" SelectedItem="{Binding Angle, Mode=TwoWay}" SelectionChanged="RadComboBox_SelectionChanged" />
+        <TextBlock Grid.Row="2" Margin="2" Text="{Binding Resource.Alignment, Source={StaticResource localizedStrings}}" VerticalAlignment="Center" />
+        <rad:RadComboBox Grid.Column="1" Grid.Row="2" Margin="2" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Alignments}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding Alignment, Mode=TwoWay}" SelectionChanged="RadComboBox_SelectionChanged" />
+        <TextBlock Grid.Row="3" Margin="2" Text="{Binding Resource.NodeSpacing, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding NodeSpacing, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="3" Margin="2" Minimum="0" Maximum="200" Value="{Binding NodeSpacing, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="4" Margin="2" Text="{Binding Resource.NodeIndent, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding NodeIndent, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="4" Margin="2" Minimum="0" Maximum="200" Value="{Binding NodeIndent, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="5" Margin="2" Text="{Binding Resource.NodeIndentPastParent, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="3" Minimum="0" Value="{Binding NodeIndentPastParent, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="5" Margin="2" Minimum="0" Maximum="1" Value="{Binding NodeIndentPastParent, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="6" Margin="2" Text="{Binding Resource.LayerSpacing, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding LayerSpacing, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="6" Margin="2" Minimum="0" Maximum="500" Value="{Binding LayerSpacing, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="7" Margin="2" Text="{Binding Resource.LayerSpacingParentOverlap, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="3" Minimum="0" Value="{Binding LayerSpacingParentOverlap, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="7" Margin="2" Minimum="0" Maximum="1" Value="{Binding LayerSpacingParentOverlap, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="8" Margin="2" Text="{Binding Resource.Sorting, Source={StaticResource localizedStrings}}" VerticalAlignment="Center" />
+        <rad:RadComboBox Grid.Column="1" Grid.Row="8" Margin="2" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Sortings}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding Sorting, Mode=TwoWay}" SelectionChanged="RadComboBox_SelectionChanged" />
+        <TextBlock Grid.Row="9" Margin="2" Text="{Binding Resource.Compaction, Source={StaticResource localizedStrings}}" VerticalAlignment="Center" />
+        <rad:RadComboBox Grid.Column="1" Grid.Row="9" Margin="2" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Compactions}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding Compaction, Mode=TwoWay}" SelectionChanged="RadComboBox_SelectionChanged" />
+        <TextBlock Grid.Row="10" Margin="2" Text="{Binding Resource.BreadthLimit, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding BreadthLimit, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="10" Margin="2" Minimum="0" Maximum="1000" Value="{Binding BreadthLimit, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="11" Margin="2" Text="{Binding Resource.RowSpacing, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding RowSpacing, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="11" Margin="2" Minimum="0" Maximum="250" Value="{Binding RowSpacing, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+        <TextBlock Grid.Row="12" Margin="2" Text="{Binding Resource.RowIndent, Source={StaticResource localizedStrings}}" VerticalAlignment="Center">
+            <ctrl:ToolTipService.ToolTip>
+                <ctrl:ToolTip Placement="Bottom" HeaderVisibility="Collapsed">
+                    <StackPanel>
+                        <rad:RadNumericUpDown NumberDecimalDigits="1" Minimum="0" Value="{Binding RowIndent, Mode=TwoWay}" LostFocus="RadNumericUpDown_LostFocus" />
+                    </StackPanel>
+                </ctrl:ToolTip>
+            </ctrl:ToolTipService.ToolTip>
+        </TextBlock>
+        <rad:RadSlider Grid.Column="1" Grid.Row="12" Margin="2" Minimum="0" Maximum="100" Value="{Binding RowIndent, Mode=TwoWay}" DragCompleted="RadSlider_DragCompleted"/>
+    </Grid>
+</view:LayoutConfig>
