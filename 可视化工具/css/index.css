@@ -1,0 +1,140 @@
+body, html {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.main {
+    background-color: #f8f8f8;
+    width: 100%;
+    height: 100%;
+}
+
+.center {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: table;
+    user-select: none;
+    padding-top: 45px;
+}
+
+/*--------------------top-----------------------*/
+
+.top {
+    width: 100%;
+    background-color: #f7f7f7;
+    position: absolute;
+    border-bottom: 1px solid #ccc;
+    z-index: 99;
+    top: 0px;
+}
+
+.ksh_menu {
+    min-width: 162px;
+    z-index: 100;
+}
+
+    .ksh_menu p {
+        padding: 5px !important;
+    }
+
+.activeIcon {
+    /*background-color: #c1d7f5;*/
+    background-color: rgba(39, 134, 222, 0.6);
+    border-radius: 5px;
+}
+
+.activeChild {
+    background-color: #f4e9cf;
+}
+
+.icon-func {
+    font-size: 21px;
+    vertical-align: middle;
+}
+
+.icon-arrow {
+    font-size: 11px;
+    font-weight: lighter;
+}
+
+/*--------------------middle-----------------------*/
+
+canvas:focus {
+    outline: none;
+}
+
+.middle {
+    height: 100%;
+    padding: 2px;
+    background-color: #2786de;
+    position: relative;
+}
+
+.diagram {
+    height: 100%;
+    width: 100%;
+    background-color: transparent;
+    position: relative;
+}
+
+.magnifier {
+    width: 350px;
+    height: 300px;
+    /*background-color: aliceblue;*/
+    background-color: #517492;
+    z-index: 300;
+    border: solid 4px #8e9a9e;
+    border-radius: 10px;
+    display: none;
+    position: absolute;
+}
+
+.overview {
+    width: 250px;
+    height: 200px;
+    /*background-color: aliceblue;*/
+    background-color: #517492;
+    z-index: 300;
+    border: solid 4px #8e9a9e;
+    display: none;
+    position: absolute;
+    left: 0px;
+    /*bottom: 15px;*/
+    bottom: 13px;
+}
+
+/*--------------------bottom-----------------------*/
+
+.status-panel {
+    position: absolute;
+    /*bottom: 15px;
+    right: 17px;*/
+    bottom: 8px;
+    right: 11px;
+    /*left: 0px;
+    top: 7px;*/
+    z-index: 99;
+    user-select: none;
+    display: flex;
+}
+
+.status-panel-item {
+    /*height: 25px;*/
+    /*border-radius: 20px 0px 0px 20px;*/
+    border: 1px solid #cccccc;
+    text-align: left;
+    line-height: 30px;
+    display: block;
+    font-size: 14px;
+    cursor: default;
+    /*background-color: rgba(76, 147, 240, 0.85);*/
+    background-color: rgba(247, 247, 247, 0.7);
+    padding: 0px 5px;
+    margin: 5px 0px;
+    min-width: 70px;
+}
+
+.status-hidde {
+    display:none
+}
