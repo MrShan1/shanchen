@@ -53,11 +53,11 @@ function layout() {
     //console.log(endTime - startTime);
     alert(endTime - startTime);
 
-    //dynamicInsert();
+    dynamicInsert();
 
-    //dynamicDelete();
+    dynamicDelete();
 
-    //showCount();
+    showCount();
 };
 
 function generateNodes(model, min, max) {
