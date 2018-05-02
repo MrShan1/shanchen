@@ -7,18 +7,34 @@
     <link href="css/tabMenu.css" rel="stylesheet" />
 </head>
 <body>
-    <div style="width:1200px; height: 600px; background-color:burlywood">
+    <div style="width: 1500px; height: 800px; background-color: burlywood; margin: 0 auto;">
         <div class="vis">
             <div class="vis_top">
-                <span>
-                    <input type="button" class="vis_tabButton" value="test1" data-group="1"/>
-                    <input type="button" class="vis_tabButton" value="test2" data-group="2"/>
-                </span>
-                <div class="vis_tabMenu" data-group="1">
-                    test1
+                <div class="vis_tabHeader">
+                    <ul>
+                        <li group="1">开始</li>
+                        <li group="2">插入</li>
+                        <li group="3">布局</li>
+                        <li group="4">视图</li>
+                        <li group="5">数据</li>
+                    </ul>
                 </div>
-                <div class="vis_tabMenu" data-group="2">
-                    test2
+                <div class="vis_tabMenuList">
+                    <div class="vis_tabMenu" group="1">
+                        test1
+                    </div>
+                    <div class="vis_tabMenu" group="2">
+                        test2
+                    </div>
+                    <div class="vis_tabMenu" group="3">
+                        test3
+                    </div>
+                    <div class="vis_tabMenu" group="4">
+                        test4
+                    </div>
+                    <div class="vis_tabMenu" group="5">
+                        test5
+                    </div>
                 </div>
             </div>
             <div class="vis_center">
