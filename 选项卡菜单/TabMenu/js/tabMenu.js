@@ -13,5 +13,11 @@
         }
     });
 
+    $("#hideMenu").click(function () {
+        $("#hideMenu a i").toggleClass("svg_jiantouxiangxia");
+
+
+    });
+
     $(".vis_tabHeader ul li[group='1']").click();
 })();

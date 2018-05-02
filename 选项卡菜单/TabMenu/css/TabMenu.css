@@ -96,3 +96,30 @@
     cursor: default;
     display: none;
 }
+
+#hideMenu {
+    position: absolute;
+    right: 10px;
+    top: 5px;
+}
+
+    #hideMenu i {
+        width: 20px;
+        height: 20px;
+        display: inline-block;
+    }
+
+.svg_style {
+    background-size: contain;
+    background-repeat: no-repeat;
+    list-style: none;
+}
+
+.svg_jiantouxiangshang {
+    background-image: url(/svgs/jiantouxiangshang.svg);
+}
+
+.svg_jiantouxiangxia {
+    /*background-image: url(/svgs/jiantouxiangxia.svg);*/
+    transform: scaleY(-1);
+}
