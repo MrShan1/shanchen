@@ -1,0 +1,157 @@
+﻿.vis {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    /*border: 2px solid #808080;*/
+    border: 2px solid #b7b7b7;
+    background-color: #e4e4e4;
+    padding-top: 103px;
+    padding-bottom: 23px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.vis_top {
+    width: 100%;
+    /*height: 100px;*/
+    height: auto;
+    position: absolute;
+    /*background: url(/images/background.png) repeat-x;*/
+    /*background: url(/images/background-top.png) repeat-x;*/
+    /*background-size: contain;*/
+    top: 0px;
+    z-index: 1;
+}
+
+.vis_center {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-top: 1px solid #b7b7b7;
+    border-bottom: 1px solid #b7b7b7;
+    background-color: #fff;
+    box-sizing: border-box;
+    background: url(/images/force.png) repeat;
+    background-size: contain;
+}
+
+.vis_bottom {
+    width: 100%;
+    height: 20px;
+    position: absolute;
+    /*background-color: lightskyblue;*/
+    /*background: url(/images/background3.png) repeat-x;*/
+    background: url(/images/status.png) no-repeat;
+    background-size: 100% 20px;
+    bottom: 0px;
+    border-top: 1px solid #c0c0c0;
+}
+
+.vis_tabHeader {
+    width: 100%;
+    /*background-color: #f7f7f7;*/
+    background: url(/images/background3.png) repeat-x;
+    background-size: contain;
+}
+
+    .vis_tabHeader ul {
+        /*background-color: #f7f7f7;*/
+        width: 100%;
+        height: 30px;
+        list-style: none;
+        margin: 0px;
+        padding: 0px;
+        display: flex;
+    }
+
+        .vis_tabHeader ul li {
+            width: 50px;
+            /*height: 22px;*/
+            text-align: center;
+            margin: 5px 0 0 5px;
+            border: 1px solid transparent;
+            border-radius: 5px 5px 0 0;
+            cursor: default;
+            padding: 2px 2px 0 2px;
+        }
+
+            .vis_tabHeader ul li.selected {
+                box-shadow: 0px -1px 1px #c1c1c1;
+                border-top: 1px solid transparent;
+                border-right: 1px solid #c1c1c1;
+                border-bottom: 1px solid white !important;
+                border-left: 1px solid #c1c1c1;
+                background-color: #fff;
+            }
+
+            .vis_tabHeader ul li:hover {
+                box-shadow: 0px -1px 2px #c1c1c1;
+                border-top: 1px solid transparent;
+                border-right: 1px solid #c1c1c1;
+                border-bottom: 1px solid #c1c1c1;
+                border-left: 1px solid #c1c1c1;
+            }
+
+.vis_tabMenuList {
+    width: 100%;
+    /*height: 70px;*/
+    margin: -1px 0 0 0;
+    background: url(/images/background2.png) repeat-x;
+    background-size: contain;
+    border-bottom: 1px solid #c0c0c0;
+}
+
+.vis_float {
+    box-shadow: 0px 2px 10px #c1c1c1;
+}
+
+.vis_tabMenu {
+    width: 100%;
+    /*height: 100%;*/
+    height: 70px;
+    border-top: 1px solid #c1c1c1;
+    cursor: default;
+    display: none;
+    background: url(/images/menu.png) no-repeat;
+    background-size: auto 70px;
+    /*border-bottom: 1px solid #c0c0c0;*/
+    font-size: 40px;
+}
+
+.vis_scroll {
+    width: 20px;
+    height: 100%;
+    float: left;
+    background-color: red;
+}
+
+#hideMenu {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+}
+
+    #hideMenu i {
+        width: 12px;
+        height: 12px;
+        display: block;
+    }
+
+.svg_style {
+    background-size: contain;
+    background-repeat: no-repeat;
+    list-style: none;
+}
+
+.svg_jiantouxiangshang {
+    background-image: url(/svgs/jiantouxiangshang.svg);
+}
+
+.svg_jiantouxiangxia {
+    background-image: url(/svgs/jiantouxiangshang.svg);
+    transform: scaleY(-1);
+}
+
+.svg_tuding {
+    background-image: url(/svgs/tuding.svg);
+}

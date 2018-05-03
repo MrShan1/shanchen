@@ -7,34 +7,35 @@
     <link href="css/tabMenu.css" rel="stylesheet" />
 </head>
 <body>
-    <div style="width: 1500px; height: 800px; background-color: burlywood; margin: 0 auto;">
+    <div style="width: 1500px; height: 800px; background-color: burlywood; <!--margin: 0 auto;-->">
         <div class="vis">
-            <div class="vis_top">
+            <div class="vis_top" data-mode="1" data-lastgroup="1">
                 <div class="vis_tabHeader">
                     <ul>
-                        <li group="1">开始</li>
-                        <li group="2">插入</li>
-                        <li group="3">布局</li>
-                        <li group="4">视图</li>
-                        <li group="5">数据</li>
+                        <li data-group="1">开始</li>
+                        <li data-group="2">插入</li>
+                        <li data-group="3">布局</li>
+                        <li data-group="4">视图</li>
+                        <li data-group="5">数据</li>
                     </ul>
                 </div>
                 <div class="vis_tabMenuList">
-                    <div class="vis_tabMenu" group="1">
-                        test1
+                    <div class="vis_tabMenu" data-group="1">
+                        面板1
                     </div>
-                    <div class="vis_tabMenu" group="2">
-                        test2
+                    <div class="vis_tabMenu" data-group="2">
+                        面板2
                     </div>
-                    <div class="vis_tabMenu" group="3">
-                        test3
+                    <div class="vis_tabMenu" data-group="3">
+                        面板3
                     </div>
-                    <div class="vis_tabMenu" group="4">
-                        test4
+                    <div class="vis_tabMenu" data-group="4">
+                        面板4
                     </div>
-                    <div class="vis_tabMenu" group="5">
-                        test5
+                    <div class="vis_tabMenu" data-group="5">
+                        面板5
                     </div>
+                    <div class="vis_scroll">test</div>
                 </div>
                 <div id="hideMenu">
                     <a><i class="svg_jiantouxiangshang svg_style"></i></a>
