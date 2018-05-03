@@ -81,9 +81,9 @@
 
             $(".vis_top").removeClass("vis_float");
 
-            $("#hideMenu a i").removeClass("svg_jiantouxiangxia");
-            $("#hideMenu a i").removeClass("svg_tuding");
-            $("#hideMenu a i").addClass("svg_jiantouxiangshang");
+            $("#hideMenu i").removeClass("svg_jiantouxiangxia");
+            $("#hideMenu i").removeClass("svg_tuding");
+            $("#hideMenu i").addClass("svg_jiantouxiangshang");
 
             var group = $(".vis_top").data("lastGroup");
             var tab = $(".vis_tabHeader ul li[data-group='" + group + "']");
@@ -94,18 +94,18 @@
 
             $(".vis_top").removeClass("vis_float");
 
-            $("#hideMenu a i").removeClass("svg_jiantouxiangshang");
-            $("#hideMenu a i").removeClass("svg_tuding");
-            $("#hideMenu a i").addClass("svg_jiantouxiangxia");
+            $("#hideMenu i").removeClass("svg_jiantouxiangshang");
+            $("#hideMenu i").removeClass("svg_tuding");
+            $("#hideMenu i").addClass("svg_jiantouxiangxia");
 
             hideAllMenus();
         }
         else if (val === 3) {
             $(".vis_top").addClass("vis_float");
 
-            $("#hideMenu a i").removeClass("svg_jiantouxiangshang");
-            $("#hideMenu a i").removeClass("svg_jiantouxiangxia");
-            $("#hideMenu a i").addClass("svg_tuding");
+            $("#hideMenu i").removeClass("svg_jiantouxiangshang");
+            $("#hideMenu i").removeClass("svg_jiantouxiangxia");
+            $("#hideMenu i").addClass("svg_tuding");
         }
     };
 
