@@ -42,6 +42,24 @@
         }
     });
 
+    $(".vis_scroll_left").click(function () {
+        var tabMenu = $(this).parent(".vis_tabMenu");
+        var scrollLeft = $(tabMenu).scrollLeft() - 100;
+
+        $(tabMenu).scrollLeft(scrollLeft);
+
+        moveScroll(tabMenu);
+    });
+
+    $(".vis_scroll_right").click(function () {
+        var tabMenu = $(this).parent(".vis_tabMenu");
+        var scrollLeft = $(tabMenu).scrollLeft() + 100;
+
+        $(tabMenu).scrollLeft(scrollLeft);
+
+        moveScroll(tabMenu);
+    });
+
     function showMenu(tab) {
         hideAllMenus();
 
@@ -107,6 +125,28 @@
             $("#hideMenu i").removeClass("svg_jiantouxiangxia");
             $("#hideMenu i").addClass("svg_tuding");
         }
+    };
+
+    function moveScroll(tabMenu) {
+        var leftScroll = $(tabMenu).find(".vis_scroll_left");
+        var rightScroll = $(tabMenu).find(".vis_scroll_right");
+        var scrollLeft = tabMenu[0].scrollLeft;
+        var clientWidth = tabMenu[0].clientWidth;
+        var scrollWidth = tabMenu[0].scrollWidth;
+
+        if (scrollLeft === 0) {
+            $(leftScroll).css("display", "none");
+        }
+        else if (scrollWidth <= Math.abs(scrollLeft) + clientWidth) {
+            $(rightScroll).css("display", "none");
+        }
+        else {
+            $(leftScroll).css("display", "block");
+            $(rightScroll).css("display", "block");
+        }
+
+        $(leftScroll).css("left", scrollLeft);
+        $(rightScroll).css("right", -scrollLeft);
     };
 
     $(".vis_tabHeader ul li[data-group='1']").click();

@@ -117,10 +117,11 @@
     /*border-bottom: 1px solid #c0c0c0;*/
     font-size: 40px;
     position: relative;
+    overflow: hidden;
 }
 
 .vis_scroll {
-    width: 20px;
+    width: 16px;
     height: 66px;
     /*float: left;*/
     /* background-color: red; */
@@ -134,14 +135,15 @@
 }
 
     .vis_scroll i {
-        height: 15px;
-        width: 15px;
+        height: 13px;
+        width: 13px;
         display: block;
-        margin: 24px 0 0 3px;
+        margin: 24px 0 0 1px;
     }
 
 .vis_scroll_left {
     left: 0;
+    display: none;
 }
 
 .vis_scroll_right {
