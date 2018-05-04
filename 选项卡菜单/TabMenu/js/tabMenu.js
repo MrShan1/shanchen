@@ -95,7 +95,7 @@
         $(".vis_top").data("mode", val);
 
         if (val === 1) {
-            $(".vis").css("padding-top", "103px");
+            $(".vis").css("padding-top", "133px");
 
             $(".vis_top").removeClass("vis_float");
 
