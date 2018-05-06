@@ -33,8 +33,13 @@ function load() {
 };
 
 function loadData() {
-    generateNodes(wholeDiagram.model, 1000, 1000);
-    generateLinks(wholeDiagram.model, 5, 5);
+    //var model = new go.GraphLinksModel();
+    //wholeDiagram.layout.model = model;
+
+    var model = wholeDiagram.model;
+
+    generateNodes(model, 5000, 5000);
+    generateLinks(model, 5, 5);
 
     //wholeDiagram.layoutDiagram(true);
 
@@ -47,6 +52,9 @@ function layout() {
     startTime = new Date();
 
     wholeDiagram.layoutDiagram(true);
+    //wholeDiagram.layout.doLayout();
+    //wholeDiagram.model.addNodeDataCollection(wholeDiagram.layout.model.nodeDataArray);
+    //wholeDiagram.model.addLinkDataCollection(wholeDiagram.layout.model.linkDataArray);
 
     endTime = new Date();
 
@@ -134,6 +142,11 @@ function createDiagram() {
                 height: 20
             },
             new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
+            //new go.Binding("position", "bounds", function (b) {
+            //    return b.position;
+            //}).makeTwoWay(function (p, d) {
+            //    return new go.Rect(p.x, p.y, d.bounds.width, d.bounds.height);
+            //}),
             $(go.Shape, "Rectangle",
                 new go.Binding("fill", "color")
             ),
@@ -167,6 +180,13 @@ function createWholeDiagram() {
                             isOngoing: false
                         }
                     ),
+                //layout:
+                //    $(VirtualizedForceDirectedLayout,
+                //        {
+                //            isInitial: false,
+                //            isOngoing: false
+                //        }
+                //    ),
                 //layout:
                 //    $(go.CircularLayout,
                 //        {
@@ -218,6 +238,11 @@ function createWholeDiagram() {
                 //visible: false
             },
             new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
+             //new go.Binding("position", "bounds", function (b) {
+             //    return b.position;
+             //}).makeTwoWay(function (p, d) {
+             //    return new go.Rect(p.x, p.y, d.bounds.width, d.bounds.height);
+             //}),
             $(go.Shape, "Rectangle",
                 {
 
@@ -325,3 +350,98 @@ function doTreeLayout() {
 function doLayout() {
     wholeDiagram.layoutDiagram(true);
 };
+
+function computeDocumentBounds(model) {
+    var b = new go.Rect();
+    var ndata = model.nodeDataArray;
+    for (var i = 0; i < ndata.length; i++) {
+        var d = ndata[i];
+        if (!d.bounds) continue;
+        if (i === 0) {
+            b.set(d.bounds);
+        } else {
+            b.unionRect(d.bounds);
+        }
+    }
+    return b;
+}
+
+//#region VirtualizedForceDirected
+// Here we try to replace the dependence of ForceDirectedLayout on Nodes
+// with depending only on the data in the GraphLinksModel.
+function VirtualizedForceDirectedLayout() {
+    go.ForceDirectedLayout.call(this);
+    this.isOngoing = false;
+    this.model = null;  // add this property for holding the whole GraphLinksModel
+}
+go.Diagram.inherit(VirtualizedForceDirectedLayout, go.ForceDirectedLayout);
+
+/** @override */
+VirtualizedForceDirectedLayout.prototype.createNetwork = function () {
+    return new VirtualizedForceDirectedNetwork();  // defined below
+};
+
+// ignore the argument, an (implicit) collection of Parts
+/** @override */
+VirtualizedForceDirectedLayout.prototype.makeNetwork = function (coll) {
+    var net = this.createNetwork();
+    net.addData(this.model);  // use the model data, not any actual Nodes and Links
+    return net;
+};
+
+/** @override */
+VirtualizedForceDirectedLayout.prototype.commitLayout = function () {
+    go.ForceDirectedLayout.prototype.commitLayout.call(this);
+    // can't depend on regular bounds computation that depends on all Nodes existing
+    this.diagram.fixedBounds = computeDocumentBounds(this.model);
+    // update the positions of any existing Nodes
+    this.diagram.nodes.each(function (node) {
+        node.updateTargetBindings();
+    });
+};
+// end VirtualizedForceDirectedLayout class
+
+
+function VirtualizedForceDirectedNetwork() {
+    go.ForceDirectedNetwork.call(this);
+}
+go.Diagram.inherit(VirtualizedForceDirectedNetwork, go.ForceDirectedNetwork);
+
+VirtualizedForceDirectedNetwork.prototype.addData = function (model) {
+    if (model instanceof go.GraphLinksModel) {
+        var dataVertexMap = new go.Map();
+        // create a vertex for each node data
+        var ndata = model.nodeDataArray;
+        for (var i = 0; i < ndata.length; i++) {
+            var d = ndata[i];
+            var v = this.createVertex();
+            v.data = d;  // associate this Vertex with data, not a Node
+            dataVertexMap.add(model.getKeyForNodeData(d), v);
+            this.addVertex(v);
+        }
+        // create an edge for each link data
+        var ldata = model.linkDataArray;
+        for (var i = 0; i < ldata.length; i++) {
+            var d = ldata[i];
+            // now find corresponding vertexes
+            var from = dataVertexMap.getValue(model.getFromKeyForLinkData(d));
+            var to = dataVertexMap.getValue(model.getToKeyForLinkData(d));
+            if (from === null || to === null) continue;  // skip
+            // create and add VirtualizedForceDirectedEdge
+            var e = this.createEdge();
+            e.data = d;  // associate this Edge with data, not a Link
+            e.fromVertex = from;
+            e.toVertex = to;
+            this.addEdge(e);
+        }
+    } else {
+        throw new Error("can only handle GraphLinksModel data");
+    }
+};
+
+/** @override */
+VirtualizedForceDirectedNetwork.prototype.deleteArtificialVertexes = function () { };
+// end VirtualizedForceDirectedNetwork class
+
+// end of VirtualizedForceDirected[Layout/Network] classes
+//#endregion
