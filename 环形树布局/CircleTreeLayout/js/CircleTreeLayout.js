@@ -24,6 +24,22 @@ RadialTreeLayout.prototype.createNetwork = function () {
 };
 
 /**
+* 执行布局
+*
+* @param {Diagram|Group|Iterable} coll 要进行布局的数据集合
+* @override
+*/
+RadialTreeLayout.prototype.doLayout = function (coll) {
+    if (this.network === null) {
+        this.network = this.makeNetwork(coll);
+    }
+
+    if (this.rootKey === null) {
+
+    }
+};
+
+/**
 * 获取或设置节点数
 *
 * @param value {String} 根节点主键
@@ -61,6 +77,7 @@ go.Diagram.inherit(RadialTreeNetwork, go.LayoutNetwork);
 * 生成网络的边线
 *
 * @return {RadialTreeEdge} 径向树边线
+* @override
 */
 RadialTreeNetwork.prototype.createEdge = function () {
     return new RadialTreeEdge();
@@ -70,6 +87,7 @@ RadialTreeNetwork.prototype.createEdge = function () {
 * 生成网络的顶点
 *
 * @return {RadialTreeVertex} 径向树顶点
+* @override
 */
 RadialTreeNetwork.prototype.createVertex = function () {
     return new RadialTreeVertex();
