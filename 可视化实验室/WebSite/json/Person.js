@@ -1,0 +1,37 @@
+﻿{ "class": "go.GraphLinksModel",
+"nodeDataArray": [
+{"key":"id_001", "visible":"true", "type":"Person", "name":"Stella Payne Diaz", "age":"35", "position":"CEO"               , "image":"images/HS1.png"  },
+{"key":"id_002", "visible":"true", "type":"Person", "name":"Luke Warm"        , "age":"34", "position":"VP Marketing/Sales", "image":"images/HS2.png"  },
+{"key":"id_003", "visible":"true", "type":"Person", "name":"Meg Meehan Hoffa" , "age":"33", "position":"Sales"             , "image":"images/HS3.png"  },
+{"key":"id_004", "visible":"true", "type":"Person", "name":"Peggy Flaming"    , "age":"32", "position":"VP Engineering"    , "image":"images/HS4.png"  },
+{"key":"id_005", "visible":"true", "type":"Person", "name":"Saul Wellingood"  , "age":"31", "position":"Manufacturing"     , "image":"images/HS5.png"  },
+{"key":"id_006", "visible":"true", "type":"Person", "name":"Al Ligori"        , "age":"30", "position":"Marketing"         , "image":"images/HS6.png"  },
+{"key":"id_007", "visible":"true", "type":"Person", "name":"Dot Stubadd"      , "age":"29", "position":"Sales Rep"         , "image":"images/HS7.png"  },
+{"key":"id_008", "visible":"true", "type":"Person", "name":"Les Ismore"       , "age":"28", "position":"Project Mgr"       , "image":"images/HS8.png"  },
+{"key":"id_009", "visible":"true", "type":"Person", "name":"April Lynn Parris", "age":"27", "position":"Events Mgr"        , "image":"images/HS9.png"  },
+{"key":"id_010", "visible":"true", "type":"Person", "name":"Xavier Breath"    , "age":"26", "position":"Engineering"       , "image":"images/HS10.png" },
+{"key":"id_011", "visible":"true", "type":"Person", "name":"Anita Hammer"     , "age":"25", "position":"Process"           , "image":"images/HS11.png" },
+{"key":"id_012", "visible":"true", "type":"Person", "name":"Billy Aiken"      , "age":"24", "position":"Software"          , "image":"images/HS12.png" },
+{"key":"id_013", "visible":"true", "type":"Person", "name":"Stan Wellback"    , "age":"23", "position":"Testing"           , "image":"images/HS13.png" },
+{"key":"id_014", "visible":"true", "type":"Person", "name":"Marge Innovera"   , "age":"22", "position":"Hardware"          , "image":"images/HS14.png" },
+{"key":"id_015", "visible":"true", "type":"Person", "name":"Evan Elpus"       , "age":"21", "position":"Quality"           , "image":"images/HS15.png" },
+{"key":"id_016", "visible":"true", "type":"Person", "name":"Lotta B. Essen"   , "age":"20", "position":"Sales Rep"         , "image":"images/HS16.png" }
+],
+"linkDataArray": [
+{"from":"id_001", "to":"id_002", "text":"人际", "level":"1", "color":"lightgreen" },
+{"from":"id_002", "to":"id_003", "text":"人际", "level":"2", "color":"orange"     },
+{"from":"id_001", "to":"id_004", "text":"人际", "level":"1", "color":"lightgreen" },
+{"from":"id_004", "to":"id_005", "text":"人际", "level":"2", "color":"orange"     },
+{"from":"id_002", "to":"id_006", "text":"人际", "level":"2", "color":"orange"     },
+{"from":"id_003", "to":"id_007", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_005", "to":"id_008", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_006", "to":"id_009", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_004", "to":"id_010", "text":"人际", "level":"2", "color":"orange"     },
+{"from":"id_005", "to":"id_011", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_010", "to":"id_012", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_010", "to":"id_013", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_010", "to":"id_014", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_005", "to":"id_015", "text":"人际", "level":"3", "color":"skyblue"    },
+{"from":"id_003", "to":"id_016", "text":"人际", "level":"3", "color":"skyblue"    }
+]
+}

@@ -1,0 +1,1052 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal XML GoJS Sample</title>
+    <meta name="description" content="The Minimal sample, loading the model from an XML data source and binding to XML DOM elements." />
+    <meta charset="UTF-8">
+    <script src="js/go-debug-test.js"></script>
+    <script src="js/jquery-1.11.3.js"></script>
+    <script id="code">
+        var myOverview = null;
+
+        var isButtonShow = false;
+
+        //页面初始化
+        function init() {
+            //简化定义模板，避免使用$（与jQuery冲突）
+            var $$ = go.GraphObject.make;
+
+            //#region 主视图定义
+            myDiagram =
+                $$(go.Diagram, "myDiagramDiv",
+                    {
+                        initialAutoScale: go.Diagram.UniformToFill,
+                        initialContentAlignment: go.Spot.Center,
+                        //validCycle: go.Diagram.CycleDestinationTree,
+                        //autoScale: go.Diagram.Uniform,
+                        layout: $$(go.ForceDirectedLayout),
+                        allowDrop: true,  // support drag-and-drop from the Palette
+
+                        "grid.visible": false,
+                        "toolManager.hoverDelay": 300,
+                        //"SelectionMoved": function (e) { e.diagram.layout.invalidateLayout(); }
+                    }
+                );
+            //#endregion
+
+            //#region 自定义扩展按钮
+            go.GraphObject.defineBuilder("CustomExpanderButton", function (args) {
+                var button = /** @type {Panel} */ (
+                  go.GraphObject.make("Button",
+                      { // set these values for the isTreeExpanded binding conversion
+                          "_treeExpandedFigure": "MinusLine",
+                          "_treeCollapsedFigure": "PlusLine"
+                      },
+                      go.GraphObject.make(go.Shape,  // the icon
+                        {
+                            name: "ButtonIcon",
+                            figure: "MinusLine",  // default value for isTreeExpanded is true
+                            desiredSize: new go.Size(6, 6)
+                        },
+                        // bind the Shape.figure to the Node.isTreeExpanded value using this converter:
+                        new go.Binding("figure", "isTreeExpanded",
+                                       function (exp, shape) {
+                                           var button = shape.panel;
+                                           return exp ? button["_treeExpandedFigure"] : button["_treeCollapsedFigure"];
+                                       })
+                            .ofObject()),
+                      // assume initially not visible because there are no links coming out
+                      { visible: true }
+                          )
+                );
+
+                // tree expand/collapse behavior
+                button.click = function (e, button) {
+                    var node = button.part;
+                    if (node instanceof go.Adornment) node = node.adornedPart;
+                    if (!(node instanceof go.Node)) return;
+                    var diagram = node.diagram;
+                    if (diagram === null) return;
+                    var cmd = diagram.commandHandler;
+                    if (node.isTreeExpanded) {
+                        if (!cmd.canCollapseTree(node)) return;
+                    } else {
+                        if (!cmd.canExpandTree(node)) return;
+                    }
+                    e.handled = true;
+                    if (node.isTreeExpanded) {
+                        cmd.collapseTree(node);
+                    } else {
+                        cmd.expandTree(node);
+                    }
+                };
+
+                return button;
+            });
+            //#endregion
+
+            //#region 动态元素模板
+            var itemTemplate =
+                $$(go.Panel, "Horizontal",
+                  $$(go.Shape,
+                    {
+                        alignment: go.Spot.TopLeft,
+                        desiredSize: new go.Size(10, 10)
+                    }
+                  ),
+                  $$(go.TextBlock,
+                    {
+                        alignment: go.Spot.TopLeft,
+                        stroke: "#333333",
+                        font: "bold 14px sans-serif"
+                    },
+                    new go.Binding("text", "Name", function (v) { return v + " : "; })
+                  ),
+                  $$(go.TextBlock,
+                    {
+                        stroke: "#333333", width: 100,
+                        font: "bold 14px sans-serif",
+                        textAlign: "start",
+                        wrap: go.TextBlock.WrapFit
+                    },
+                    new go.Binding("text", "Value")
+                  )
+                );
+            //#endregion
+
+            //#region 节点模板
+            var nodeTemplate = $$(go.Node, "Auto",
+                    {
+                        selectionAdorned: true,
+                        doubleClick: showProperty
+                    },
+                    //节点图形
+                    $$(go.Shape, "RoundedRectangle",
+                        {
+                            name: "NODE",
+                            fromLinkable: true,
+                            toLinkable: true,
+                            portId: "",
+                            fill: "lightblue",
+                            width: 170,
+                            cursor: "pointer",
+                            fromSpot: go.Spot.Default,
+                            toSpot: go.Spot.Default
+                        }
+                    ),
+                    //信息面板
+                    $$(go.Panel, "Vertical",
+                        {
+                            alignment: go.Spot.Left
+                        },
+                        //照片信息
+                        $$(go.Picture,
+                            {
+                                name: 'Picture',
+                                desiredSize: new go.Size(40, 50),
+                                margin: new go.Margin(5, 5, 5, 5)
+                            },
+                            new go.Binding("source", "Image")
+                        ),
+                        $$(go.Panel, "Vertical",
+                            {
+                                name: "LIST",
+                                padding: 3,
+                                alignment: go.Spot.TopLeft,
+                                defaultAlignment: go.Spot.Left,
+                                stretch: go.GraphObject.Horizontal,
+                                itemTemplate: itemTemplate
+                            },
+                            new go.Binding("itemArray", "PropertyValues")
+                        ),
+                        $$("CustomExpanderButton",
+                            {
+                                name: "EXPANDER",
+                                visible: false
+                            }
+                        )
+                    )
+                );
+
+            myDiagram.nodeTemplate = nodeTemplate;
+            //#endregion
+
+            //#region 节点右键菜单
+            nodeTemplate.contextMenu =
+                $$(go.Adornment, "Vertical");
+            //#endregion
+
+            //#region 节点模板地图
+            myDiagram.nodeTemplateMap.add("NODE_TEMPLATE", nodeTemplate);
+            //#endregion
+
+            //#region 链接模板
+            myDiagram.linkTemplate =
+                $$(go.Link,
+                    {
+                        selectionAdorned: true,
+                        routing: go.Link.Normal,
+                        relinkableFrom: true,
+                        relinkableTo: true,
+                        selectable: true,
+                        doubleClick: function (e, obj) { showProperty(e, obj); }
+                    },
+                    //链接的线
+                    $$(go.Shape,
+                        { name: "LINK" },
+                        new go.Binding("stroke", "Color"),
+                        new go.Binding("strokeWidth", "Thickness", function (v) { return parseInt(v) })
+                    ),
+                    //链接的开始箭头
+                    $$(go.Shape,
+                        {
+                            fromArrow: "",
+                            scale: 1.5
+                        },
+                        new go.Binding("fromArrow", "FromArrowType"),
+                        new go.Binding("stroke", "Color"),
+                        new go.Binding("fill", "Color")
+                    ),
+                    //链接的结束箭头
+                    $$(go.Shape,
+                        {
+                          toArrow: "Standard",
+                          scale: 1.5
+                        },
+                        new go.Binding("toArrow", "ToArrowType"),
+                        new go.Binding("stroke", "Color"),
+                        new go.Binding("fill", "Color")
+                    ),
+                    //链接的文本
+                    $$(go.Panel, "Vertical",
+                        {
+                            name: "LIST",
+                            padding: 3,
+                            alignment: go.Spot.TopLeft,
+                            defaultAlignment: go.Spot.Left,
+                            stretch: go.GraphObject.Horizontal,
+                            itemTemplate: itemTemplate
+                        },
+                        new go.Binding("itemArray", "PropertyValues")
+                    )
+                 );
+            //#endregion
+
+            //#region 外部元素添加监听器
+            myDiagram.addDiagramListener("ExternalObjectsDropped", addPaletteElement);
+            //#endregion
+
+            //#region 视区边界改变事件
+            myDiagram.addDiagramListener("ViewportBoundsChanged", function (e) {
+                var scale = e.diagram.scale;
+
+                if (scale < 0.1) {
+                    e.diagram.scale = 0.1;
+                }
+                else if (scale > 4) {
+                    e.diagram.scale = 4;
+                }
+
+                //设定滑块值
+                var mySlider = document.getElementById("mySlider");
+                mySlider.value = myDiagram.scale * 100;
+
+            });
+            //#endregion
+
+            //#region 视图的鼠标移动事件
+            myDiagram.toolManager.doMouseMove = function () {
+                go.ToolManager.prototype.doMouseMove.call(myDiagram.toolManager);
+                var myMagnifierDiv = document.getElementById("myMagnifierDiv");
+                //使放大镜显示在鼠标位置
+                if (myMagnifierDiv.style.display !== "none") {
+                    var e = myDiagram.lastInput;
+                    var osize = myMagnifier.viewportBounds.size;
+
+                    myMagnifier.position = new go.Point(e.documentPoint.x - osize.width / 2, e.documentPoint.y - osize.height / 2);
+
+                    if ((myMagnifier.documentBounds.x < (e.documentPoint.x - osize.width / 2))
+                        && (e.documentPoint.x + osize.width / 2) < (myMagnifier.documentBounds.x + myMagnifier.documentBounds.width)) {
+                        myMagnifierDiv.style.left = (e.viewPoint.x + myMagnifierDiv.scrollWidth / 2) + "px";
+                    }
+                    if ((myMagnifier.documentBounds.y < (e.documentPoint.y - osize.height / 2))
+                        && (e.documentPoint.y + osize.height / 2) < (myMagnifier.documentBounds.y + myMagnifier.documentBounds.height)) {
+                        myMagnifierDiv.style.top = (e.viewPoint.y) + "px";
+                    }
+                }
+            };
+            //#endregion
+
+            //#region 放大镜视图
+            myMagnifier =
+                $$(go.Overview, myMagnifierDiv,  // the HTML DIV element for the Overview
+                    {
+                        observed: myDiagram,   // tell it which Diagram to show
+                        initialScale: 1.5,  // zoom in even more than normal
+                        autoScale: go.Diagram.None,  // don't show whole observed Diagram
+                        hasHorizontalScrollbar: false,  // don't show any scrollbars
+                        hasVerticalScrollbar: false
+                    }
+                );
+
+            // disable all mouse-down tools
+            myMagnifier.toolManager.mouseDownTools.each(function (t) { t.isEnabled = false; });
+
+            // handle mouse moves within the Overview by redirecting the events to the myDiagram
+            myMagnifier.doMouseMove = function () {
+                var pt = myMagnifier.lastInput.documentPoint.copy();
+                var e = myDiagram.lastInput;
+                e.documentPoint = pt;
+                e.viewPoint = myDiagram.transformDocToView(e.documentPoint);
+                myDiagram.toolManager.doMouseMove();
+            };
+            //#endregion
+
+            //#region 模板管理器
+            myPalette =
+                $$(go.Palette, "myPalette",
+                    {
+                        // share the template map with the Palette
+                        nodeTemplateMap: myDiagram.nodeTemplateMap,
+                        autoScale: go.Diagram.Uniform  // everything always fits in viewport
+                    }
+                );
+            //#endregion
+
+            //jQuery.getJSON("json/Test.js", loadDiagram);
+
+            loadData();
+        }
+
+        function loadData() {
+            $.ajax({
+                url: 'code/Handler.ashx',
+                type: 'POST',
+                data: {},
+                success: function (responseData) {
+                    if (responseData !== null) {
+                        loadDiagram(responseData);
+                    }
+                },
+                error: function (err) {
+                    alert("执行失败");
+                }
+
+            });
+        }
+
+        //加载面板
+        function loadDiagram(data) {
+            //解析json数据
+            var modeldata = analysisJsonData(data);
+
+            //设定面板模型
+            myDiagram.model = new go.GraphLinksModel(modeldata.nodeDataArray, modeldata.linkDataArray);
+
+            //生成右键菜单
+            createContextMenu(modeldata.linkTypes, myDiagram);
+
+            //获取模板管理器元素
+            getPaletteItems(modeldata.nodeTypes, myPalette);
+
+            //显示节点筛选面板
+            showNodeFilterTable(modeldata.nodeTypes);
+        }
+
+        //解析json数据
+        function analysisJsonData(data) {
+            var layout = data.Layout;
+            var nodeTypes = [];
+            var linkTypes = [];
+            var nodes = [];
+            var links = [];
+
+            for (var i = 0; i < data.NodeTypes.length; i++) {
+                nodeTypes[data.NodeTypes[i].Id] = data.NodeTypes[i];
+            }
+            for (var i = 0; i < data.LinkTypes.length; i++) {
+                linkTypes[data.LinkTypes[i].Id] = data.LinkTypes[i];
+            }
+            for (var i = 0; i < data.Nodes.length; i++) {
+                nodes[data.Nodes[i].Id] = data.Nodes[i];
+            }
+            for (var i = 0; i < data.Links.length; i++) {
+                links[data.Links[i].Id] = data.Links[i];
+            }
+
+            var nodeDataArray = [];
+            for (var key in nodes) {
+                var originalNode = nodes[key];
+                var finalNode = [];
+                var nodeType;
+
+                finalNode.key = originalNode.Id;
+                finalNode.NodeTypeId = originalNode.NodeTypeId;
+                finalNode.Image = originalNode.Image;
+                finalNode.PropertyValues = originalNode.PropertyValues;
+                finalNode.category = "NODE_TEMPLATE";
+
+                nodeType = nodeTypes[finalNode.NodeTypeId];
+                for (var m = 0; m < finalNode.PropertyValues.length; m++) {
+                    var propertyValue = finalNode.PropertyValues[m];
+                    for (var n = 0; n < nodeType.Properties.length; n++) {
+                        var property = nodeType.Properties[n];
+                        if (propertyValue.Key === property.Key) {
+                            propertyValue.Name = property.Name;
+                            propertyValue.IsHidden = property.IsHidden;
+                            break;
+                        }
+                    }
+                }
+
+                nodeDataArray.push(finalNode);
+            }
+
+            var linkDataArray = [];
+            for (var key in links) {
+                var originalLink = links[key];
+                var finalLink = [];
+                var linkType;
+
+                finalLink.key = originalLink.Id;
+                finalLink.LinkTypeId = originalLink.LinkTypeId;
+                finalLink.from = originalLink.FromId;
+                finalLink.to = originalLink.ToId;
+                finalLink.PropertyValues = originalLink.PropertyValues;
+
+                linkType = linkTypes[finalLink.LinkTypeId];
+                finalLink.Color = linkType.Color;
+                finalLink.Thickness = linkType.Thickness;
+                finalLink.FromArrowType = linkType.FromArrowType;
+                finalLink.ToArrowType = linkType.ToArrowType;
+
+                for (var m = 0; m < finalLink.PropertyValues.length; m++) {
+                    var propertyValue = finalLink.PropertyValues[m];
+                    for (var n = 0; n < linkType.Properties.length; n++) {
+                        var property = linkType.Properties[n];
+                        if (propertyValue.Key === property.Key) {
+                            propertyValue.Name = property.Name;
+                            propertyValue.IsHidden = property.IsHidden;
+                            break;
+                        }
+                    }
+                }
+
+                linkDataArray.push(finalLink);
+            }
+
+            var modelData = [];
+            modelData.layout = layout;
+            modelData.nodeTypes = nodeTypes;
+            modelData.linkTypes = linkTypes;
+            modelData.nodeDataArray = nodeDataArray;
+            modelData.linkDataArray = linkDataArray;
+
+            return modelData;
+        }
+
+        //生成右键菜单
+        function createContextMenu(linkTypes, diagram) {
+            var $$ = go.GraphObject.make;
+            var contextMenu = diagram.nodeTemplate.contextMenu;
+
+            for (var key in linkTypes) {
+                var textBlock = new go.TextBlock();
+                textBlock.text = "关联" + linkTypes[key].Name;
+
+                var button = $$("ContextMenuButton");
+                button.add(textBlock);
+                button.click = function (e, obj) {
+                    getExpandedDatas(e, obj, linkTypes[key].Id);
+                }
+
+                contextMenu.add(button);
+            }
+
+            myDiagram.nodeTemplate.contextMenu = contextMenu;
+        }
+
+        //获取拓展数据
+        function getExpandedDatas(e, obj, linkTypeId) {
+            var adorn = obj.part;
+            var diagram = adorn.diagram;
+            var oldnode = adorn.adornedPart;
+            var olddata = oldnode.data;
+
+            if (olddata.key !== null || olddata.key !== undefined) {
+                jQuery.ajax({
+                    url: "json/" + linkTypeId + "_" + olddata.key + ".js",
+                    success: function (data) {
+                        diagram.startTransaction("Add Node");
+
+                        //解析json数据
+                        var modeldata = analysisJsonData(data);
+
+                        var nodeArray = modeldata.nodeDataArray;
+                        for (var i = 0; i < nodeArray.length; i++) {
+                            var node = nodeArray[i];
+
+                            if (diagram.model.findNodeDataForKey(node.key) === null) {
+                                diagram.model.addNodeData(node);
+                            }
+                        }
+
+                        var linkArray = modeldata.linkDataArray;
+                        for (var i = 0; i < linkArray.length; i++) {
+                            var link = linkArray[i];
+                            var isExist = false;
+
+                            for (var j = 0; j < diagram.model.linkDataArray.length; j++) {
+                                var tempLinkData = diagram.model.linkDataArray[j];
+                                if (tempLinkData.from === link.from
+                                    && tempLinkData.to === link.to) {
+                                    isExist = true;
+                                    break;
+                                }
+                            }
+
+                            if (isExist === false) {
+                                diagram.model.addLinkData(link);
+                            }
+                        }
+
+                        if (nodeArray !== null && nodeArray.length > 2) {
+                            var isExisted = false;
+                            var firstNode = nodeArray[1];
+                            for (var i = 0; i < myPalette.model.nodeDataArray.length; i++) {
+                                var tempNode = myPalette.model.nodeDataArray[i];
+                                if (tempNode.type === firstNode.type) {
+                                    isExisted = true;
+                                    break;
+                                }
+                            }
+
+                            if (isExisted === false) {
+                                myPalette.model.addNodeData(firstNode);
+                                myPalette.model.setCategoryForNodeData(firstNode, firstNode.type);
+                            }
+                        }
+
+                        diagram.commitTransaction("Add Node");
+                    },
+                    dataType: "json"
+                });
+            }
+        }
+
+        //获取模板管理器元素
+        function getPaletteItems(nodeTypes, palette) {
+            for (var key in nodeTypes) {
+                var nodeType = nodeTypes[key];
+                var nodeData = [];
+
+                nodeData.key = "undefined";
+                nodeData.NodeTypeId = nodeType.Id;
+                nodeData.Image = nodeType.DefaultImage;
+                nodeData.PropertyValues = [];
+
+                for (var i = 0; i < nodeType.Properties.length; i++) {
+                    var property = nodeType.Properties[i];
+                    var propertyValue = [];
+
+                    propertyValue.Key = property.Key;
+                    propertyValue.Name = property.Name;
+                    propertyValue.IsHidden = property.IsHidden;
+                    propertyValue.Value = "undefined";
+
+                    nodeData.PropertyValues.push(propertyValue);
+                }
+
+                palette.model.addNodeData(nodeData);
+                palette.model.setCategoryForNodeData(nodeData, "NODE_TEMPLATE");
+            }
+        }
+
+        //视图适应屏幕
+        function fitScreen() {
+            myDiagram.startTransaction("initialize");
+
+            //重置视图的初始化内设定
+            myDiagram.delayInitialization();
+
+            myDiagram.commitTransaction("initialize");
+
+            myDiagram.startTransaction("fitScreen");
+
+            //视图适应屏幕
+            myDiagram.zoomToFit();
+
+            //重新设定滑块值为默认值
+            var mySlider = document.getElementById("mySlider");
+            mySlider.value = myDiagram.scale * 100;
+
+            myDiagram.commitTransaction("fitScreen");
+        }
+
+        //显示放大镜
+        function showMagnifier() {
+            var myMagnifierDiv = document.getElementById("myMagnifierDiv");
+            if (myMagnifier === null || myMagnifierDiv.style.display === "none") {
+                // show DIV
+                myMagnifierDiv.style.display = "inline";
+
+
+            } else {
+                // hide DIV
+                myMagnifierDiv.style.display = "none";
+            }
+        }
+
+        //显示全景视图
+        function showOverview() {
+            var myOverviewDiv = document.getElementById("myOverviewDiv");
+            if (myOverview === null || myOverviewDiv.style.display === "none") {
+                // show DIV
+                myOverviewDiv.style.display = "inline";
+
+                if (myOverview === null) {
+                    var $$ = go.GraphObject.make
+                    myOverview =
+                        $$(go.Overview, "myOverviewDiv",
+                            {
+                                observed: myDiagram,
+                                contentAlignment: go.Spot.Center
+                            }
+                        );
+                }
+
+            } else {
+                // hide DIV
+                myOverviewDiv.style.display = "none";
+            }
+        }
+
+        //显示网格
+        function showGridLine() {
+            if (myDiagram.grid.visible === false) {
+                myDiagram.grid.visible = true;
+            }
+            else {
+                myDiagram.grid.visible = false;
+            }
+        }
+
+        //显示节点扩展按钮
+        function showExpanderButton(value) {
+            myDiagram.nodes.each(function (obj) {
+                var expanderButton = obj.findObject("EXPANDER");
+                if (value && obj.isTreeLeaf === false) {
+                    expanderButton.visible = true;
+                }
+                else {
+                    expanderButton.visible = false;
+                    //不显示节点扩展按钮时，所有节点都展开
+                    obj.isTreeExpanded = true;
+                }
+            });
+        }
+
+        //视图的放大与缩小
+        function changeScale(value) {
+            //设定视图大小
+            myDiagram.scale = value * 0.01;
+        }
+
+        //选择颜色
+        function selectColor(value) {
+            if (myDiagram.selection !== null && myDiagram.selection.count >0) {
+                myDiagram.selection.each(function (obj) {
+                    if (obj instanceof go.Node) {
+                        var tb = obj.findObject("NODE");
+                        if (tb !== null) tb.fill = value;
+                    }
+                    else if (obj instanceof go.Link) {
+                        var tb = obj.findObject("LINK");
+                        if (tb !== null) tb.stroke = value;
+                    }
+                });
+            }
+        }
+
+        //选择形状
+        function selectShape(value) {
+            if (myDiagram.selection !== null && myDiagram.selection.count > 0) {
+                myDiagram.selection.each(function (obj) {
+                    if (obj instanceof go.Node) {
+                        var tb = obj.findObject("NODE");
+                        if (tb !== null) tb.figure = value;
+                    }
+                });
+            }
+        }
+
+        //选择布局
+        function selectLayout(value) {
+            myDiagram.startTransaction("Layout");
+
+            var layout;
+            switch (value) {
+                case "TreeLayout":
+                    layout = new go.TreeLayout();
+                    break;
+                case "CircularLayout":
+                    layout = new go.CircularLayout();
+                    break;
+                case "ForceDirectedLayout":
+                    layout = new go.ForceDirectedLayout();
+                    break;
+                case "LayeredDigraphLayout":
+                    layout = new go.LayeredDigraphLayout();
+                    break;
+                default:
+                    layout = new go.GridLayout();
+                    break;
+            }
+
+            layout.isInitial = true;
+            myDiagram.layout = layout;
+
+            myDiagram.commitTransaction("Layout");
+        }
+
+        //在属性面板上显示视图元素的详细属性
+        function showProperty(e, obj) {
+            var elementData = obj.part.data;
+
+            //非视图元素
+            if (myDiagram.findNodeForData(elementData) === null
+                && myDiagram.findLinkForData(elementData) === null) {
+                return;
+            }
+
+            //确认是否为新增节点
+            var index = elementData.key.indexOf('NewItem');
+            var disabled = true;
+            //新增节点时，可编辑
+            if (index === 0) {
+                disabled = false;
+            }
+
+            //获取属性面板
+            var propertyTable = document.getElementById("propertyTable");
+            //清空属性面板的内容
+            propertyTable.innerHTML = "";
+
+            //属性键列的模板
+            var tdKeyTemplate = document.createElement("td");
+            tdKeyTemplate.width = "90px";
+            tdKeyTemplate.style = "text-align: left";
+            //属性值列的模板
+            var tdValueTemplate = document.createElement("td");
+            tdValueTemplate.width = "110px";
+            tdValueTemplate.style = "text-align: left";
+            //文本框的模板
+            var textboxTemplate = document.createElement("input");
+            textboxTemplate.setAttribute("type", "text");
+
+            //添加ID信息
+            var tr = document.createElement("tr");
+            var tdKey_Id = tdKeyTemplate.cloneNode(true);
+            tdKey_Id.innerHTML = "ID";
+            var tdValue_Id = tdValueTemplate.cloneNode(true);
+            var textbox_Id = textboxTemplate.cloneNode(true);
+            textbox_Id.setAttribute("value", elementData.key);
+            textbox_Id.setAttribute("disabled", true);
+            tdValue_Id.appendChild(textbox_Id);
+
+            tr.appendChild(tdKey_Id);
+            tr.appendChild(tdValue_Id);
+            propertyTable.appendChild(tr);
+
+            //添加类型信息
+            var tr = document.createElement("tr");
+            var tdKey_Type = tdKeyTemplate.cloneNode(true);
+            tdKey_Type.innerHTML = "类型";
+            var tdValue_Type = tdValueTemplate.cloneNode(true);
+            var textbox_Type = textboxTemplate.cloneNode(true);
+            if (elementData.NodeTypeId !== undefined) {
+                textbox_Type.setAttribute("value", elementData.NodeTypeId);
+            }
+            else {
+                textbox_Type.setAttribute("value", elementData.LinkTypeId);
+            }
+            textbox_Type.setAttribute("disabled", true);
+            tdValue_Type.appendChild(textbox_Type);
+
+            tr.appendChild(tdKey_Type);
+            tr.appendChild(tdValue_Type);
+            propertyTable.appendChild(tr);
+
+            //添加其他属性信息
+            for (var i = 0; i < elementData.PropertyValues.length; i++) {
+                var propertyValue = elementData.PropertyValues[i];
+                var tr = document.createElement("tr");
+
+                var tdKey = tdKeyTemplate.cloneNode(true);
+                tdKey.innerHTML = propertyValue.Name;
+                var tdValue = tdValueTemplate.cloneNode(true);
+                var textbox = textboxTemplate.cloneNode(true);
+                textbox.setAttribute("id", propertyValue.Key);
+                textbox.setAttribute("value", propertyValue.Value);
+                textbox.setAttribute("onchange", "updatePartData(this, '" + elementData.key + "')");
+                if (disabled) {
+                    textbox.setAttribute("disabled", true);
+                }
+                tdValue.appendChild(textbox);
+
+                tr.appendChild(tdKey);
+                tr.appendChild(tdValue);
+                propertyTable.appendChild(tr);
+            }
+        }
+
+        //显示节点筛选面板
+        function showNodeFilterTable(nodeTypes) {
+            var nodeFilterTable = document.getElementById("nodeFilterTable");
+
+            nodeFilterTable.innerHTML = "";
+
+            for (var key in nodeTypes) {
+                var tr = document.createElement("tr");
+
+                var tdKey = document.createElement("td");
+                tdKey.width = "80px";
+                var checkbox = document.createElement("input");
+                checkbox.setAttribute("id", nodeTypes[key].Id);
+                checkbox.setAttribute("type", "checkbox");
+                checkbox.setAttribute("checked", "checked");
+                checkbox.setAttribute("onchange", "filterNode(this)");
+                tdKey.appendChild(checkbox);
+
+                var tdValue = document.createElement("td");
+                tdValue.width = "120px";
+                tdValue.style = "text-align: left";
+                tdValue.innerHTML = nodeTypes[key].Name;
+
+                tr.appendChild(tdKey);
+                tr.appendChild(tdValue);
+                nodeFilterTable.appendChild(tr);
+            }
+        }
+
+        //筛选节点
+        function filterNode(obj) {
+            var type = obj.id;
+            var isChecked = obj.checked;
+
+            myDiagram.startTransaction("Update");
+            var nodeDataArray = myDiagram.model.nodeDataArray;
+
+            for (var i = 0; i < nodeDataArray.length; i++) {
+                var nodedata = nodeDataArray[i];
+                if (nodedata === null || nodedata === undefined || nodedata.NodeTypeId !== type) {
+                    continue;
+                }
+
+                var node = myDiagram.findNodeForData(nodedata);
+                if (node !== null) {
+                    node.visible = isChecked;
+                    node.updateTargetBindings();
+                }
+            }
+
+            myDiagram.commitTransaction("Update");
+        }
+
+        //更新视图元素属性
+        function updatePartData(obj, key) {
+            var nodeData = myDiagram.model.findNodeDataForKey(key);
+            var linkData = null;
+
+            if (nodeData === null) {
+                for (var j = 0; j < myDiagram.model.linkDataArray.length; j++) {
+                    var tempLinkData = myDiagram.model.linkDataArray[j];
+                    if (key === tempLinkData.key) {
+                        linkData = tempLinkData;
+                        break;
+                    }
+                }
+            }
+
+            var partData = (nodeData !== null) ? nodeData : linkData;
+
+            if (partData !== null) {
+                for (var i = 0; i < partData.PropertyValues.length; i++) {
+                    var propertyValue = partData.PropertyValues[i];
+
+                    if (obj.id === propertyValue.Key) {
+                        propertyValue.Value = obj.value;
+                        break;
+                    }
+                }
+
+                var part = myDiagram.findPartForData(partData);
+                if (part !== null) {
+                    part.updateTargetBindings();
+                }
+            }
+        }
+
+        //添加画板元素
+        function addPaletteElement(e) {
+            e.diagram.selection.each(function (obj) {
+                var isNode = obj instanceof go.Node;
+                if (isNode) {
+                    var nodeData = myDiagram.model.findNodeDataForKey(obj.part.data.key);
+                    if (nodeData !== null) {
+                        var guidKey = createNewGuid();
+                        var key = "NewItem_" + guidKey;
+                        //设定新的Key值
+                        myDiagram.model.setKeyForNodeData(nodeData, key);
+                    }
+                }
+            });
+        }
+
+        //生成唯一标识符
+        function createNewGuid() {
+            var guid = "";
+            for (var i = 1; i <= 32; i++) {
+                var n = Math.floor(Math.random() * 16.0).toString(16);
+                guid += n;
+                if ((i == 8) || (i == 12) || (i == 16) || (i == 20))
+                    guid += "-";
+            }
+            return guid;
+        }
+
+        function loadExcelData(obj) {
+            var path = obj.value;
+
+            if (path !== null) {
+                $.ajax({
+                    url: 'code/ExcelDataLoader.ashx',
+                    type: 'POST',
+                    data: path,
+                    success: function (responseData) {
+                        if (responseData !== null) {
+                            loadDiagram(responseData);
+                        }
+                    },
+                    error: function (err) {
+                        alert("执行失败");
+                    }
+
+                });
+            }
+        }
+
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <table style="width: 1850px; height: 900px;background-color:antiquewhite;">
+            <tr>
+                <td style="width: 10%; vertical-align:top">
+                    <div id="myPalette" style="border: solid 1px black; height: 480px"></div>
+                </td>
+                <td>
+                    <div style="height:50px;background-color:lightgray;border:1px double #808080;margin-bottom:2px;">
+                        <table>
+                            <tr>
+                                <td style="margin: 2px;">
+                                    <button style="height: 46px; width: 50px; background: url(icon/zoom-fit-best.png); background-size: cover"
+                                            onclick="fitScreen()" />
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="checkbox" style="height: 20px; width: 20px;" onclick="showMagnifier()" />
+                                    <label>放大镜</label>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="checkbox" style="height: 20px; width: 20px;" onclick="showOverview()" />
+                                    <label>全景视图</label>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <select onchange="selectColor(this.value)">
+                                        <option value="blue">blue</option>
+                                        <option value="red">red</option>
+                                        <option value="yellow">yellow</option>
+                                        <option value="orange">orange</option>
+                                    </select>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <select onchange="selectShape(this.value)">
+                                        <option value="Rectangle">Rectangle</option>
+                                        <option value="Ellipse">Ellipse</option>
+                                        <option value="TriangleRight">TriangleRight</option>
+                                        <option value="Cloud">Cloud</option>
+                                    </select>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <select onchange="selectLayout(this.value)">
+                                        <option value="TreeLayout">TreeLayout</option>
+                                        <option value="CircularLayout">CircularLayout</option>
+                                        <option value="ForceDirectedLayout">ForceDirectedLayout</option>
+                                        <option value="LayeredDigraphLayout">LayeredDigraphLayout</option>
+                                        <option value="GridLayout">GridLayout</option>
+                                    </select>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="checkbox" style="height: 20px; width: 20px;" onclick="showGridLine()" />
+                                    <label>网格显示</label>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="checkbox" style="height: 20px; width: 20px;" onclick="showExpanderButton(this.checked)" />
+                                    <label>节点扩展按钮</label>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="text" id="positionX"/>
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="text" id="positionY" />
+                                </td>
+                                <td style="margin: 2px;">
+                                    <input type="file" onchange="loadExcelData(this)" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div id="myDiagramDiv" style="border: solid 1px black; height:800px;"></div>
+                    <div id="myMagnifierDiv" style="display: none; position: absolute; background-color: white; z-index: 300; border: solid 1px blue; width: 200px; height: 200px"></div>
+                    <div id="myOverviewDiv" style="display: none; position: absolute; background-color: aliceblue; z-index: 300; border: solid 1px blue; width: 200px; height: 100px; top: 65px; left: 200px;"></div>
+                    <div style="border: solid 1px black; height:30px;">
+                        <input id="mySlider" type="range" style="vertical-align: top; float: right" min="10" max="400" value="100" onchange="changeScale(this.value)"/>
+                    </div>
+                </td>
+                <td style="width: 10%; vertical-align: top; border: solid 1px black">
+                    <div style="height: 50%; border: solid 1px black">
+                        <table style="border: solid 1px black; width: 200px; margin: 2px 2px 0px 2px; overflow:auto" border="1" cellpadding="0" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <td width="80px" style="text-align: left">
+                                        是否显示
+                                    </td>
+                                    <td width="120px" style="text-align: left">
+                                        类型
+                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody id="nodeFilterTable"></tbody>
+                        </table>
+                    </div>
+                    <div style="height: 350px; border: solid 1px black; margin-top: 40px">
+                        <table style="border: solid 1px black; width: 200px; margin: 2px 2px 0px 2px; overflow:auto" border="1" cellpadding="0" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <td width="90px" style="text-align: left">
+                                        属性键
+                                    </td>
+                                    <td width="110px" style="text-align: left">
+                                        属性值
+                                    </td>
+                                </tr>
+                            </thead>
+                            <tbody id="propertyTable"></tbody>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

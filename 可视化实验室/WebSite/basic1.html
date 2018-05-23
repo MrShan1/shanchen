@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Basic GoJS Sample</title>
+    <meta name="description" content="Interactive GoJS diagram demonstrating creating new nodes and links, reconnecting links, grouping and ungrouping, and context menus and tooltips for nodes, for links, and for the diagram background." />
+    <!-- Copyright 1998-2016 by Northwoods Software Corporation. -->
+    <meta charset="UTF-8">
+    <script src="js/go.js"></script>
+    <!--<script src="js/goIntro.js"></script>-->
+    <script id="code">
+        function init() {
+            var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+            myDiagram =
+              $(go.Diagram, "myDiagramDiv",  // create a Diagram for the DIV HTML element
+                {
+                    layout:
+                    $(go.TreeLayout,
+                      {
+                          sorting: go.TreeLayout.SortingAscending,
+                          //comparer: function(a, b) {
+                          //    // A and B are TreeVertexes
+                          //    //var av = a.node.data.index;
+                          //    //var bv = b.node.data.index;
+                          //    //if (av < bv) return -1;
+                          //    //if (av > bv) return 1;
+                          //    //return 0;
+                          //},
+                          angle: 90
+                          //alignment: go.TreeLayout.AlignmentStart
+                      })
+
+                });
+
+            //myDiagram.layout = $(go.TreeLayout);
+
+            myDiagram.nodeTemplate =
+            $(go.Node, "Auto",
+              new go.Binding("text", "key"),  // bind Part.text to support sorting
+              $(go.Shape, "Ellipse", { fill: "lightblue" }),
+              $(go.TextBlock,
+                new go.Binding("text", "key"))
+            );
+
+            myDiagram.linkTemplate =
+              $(go.Link,
+                { routing: go.Link.Orthogonal, corner: 5 },
+                $(go.Shape));
+
+            // Create the Diagram's Model:
+            var nodeDataArray = [
+                              { key: "Alpha" },
+                              { key: "Beta", parent: "Alpha" },
+                              { key: "Gamma", parent: "Beta" },
+                              { key: "Delta", parent: "Beta" },
+                              { key: "Epsilon", parent: "Alpha" },
+                              { key: "Zeta", parent: "Epsilon" },
+                              { key: "Eta", parent: "Epsilon" },
+                              { key: "Theta", parent: "Epsilon" }
+            ];
+
+            myDiagram.model = new go.TreeModel(nodeDataArray);
+        }
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <h3>Basic GoJS Sample</h3>
+        <div id="myDiagramDiv" style="border: solid 1px black; width:400px; height:400px"></div>
+    </div>
+</body>
+</html>

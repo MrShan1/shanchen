@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graph>
+  <node key="Alpha" color="lightblue" />
+  <node key="Beta" color="orange" />
+  <node key="Gamma" color="lightgreen" />
+  <node key="Delta" color="pink" />
+  <link from="Alpha" to="Beta" color ="lightblue" />
+  <link from="Alpha" to="Gamma" color ="lightblue"/>
+  <link from="Beta" to="Beta" color ="orange"/>
+  <link from="Gamma" to="Delta" color ="lightgreen"/>
+  <link from="Delta" to="Alpha" color ="pink"/>
+</graph>

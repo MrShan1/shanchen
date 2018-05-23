@@ -1,0 +1,992 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal XML GoJS Sample</title>
+    <meta name="description" content="The Minimal sample, loading the model from an XML data source and binding to XML DOM elements." />
+    <meta charset="UTF-8">
+    <script src="js/go-debug-test.js"></script>
+    <script src="js/jquery-1.11.3.js" type="text/javascript"></script>
+    <style type="text/css">
+        #myOverviewDiv {
+            position: absolute;
+            width: 200px;
+            height: 100px;
+            top: 10px;
+            left: 200px;
+            background-color: aliceblue;
+            z-index: 300; /* make sure its in front */
+            border: solid 1px blue;
+            visibility: visible;
+        }
+    </style>
+    <script id="code">
+        var highlightColor = "red";  // color parameterization
+
+        // #region ContinuousForceDirectedLayout
+        // This variation on ForceDirectedLayout does not move any selected Nodes
+        // but does move all other nodes (vertexes).
+        function ContinuousForceDirectedLayout() {
+            go.ForceDirectedLayout.call(this);
+            this._isObserving = false;
+        }
+        go.Diagram.inherit(ContinuousForceDirectedLayout, go.ForceDirectedLayout);
+
+        /** @override */
+        ContinuousForceDirectedLayout.prototype.isFixed = function (v) {
+            return v.node.isSelected;
+        }
+
+        // optimization: reuse the ForceDirectedNetwork rather than re-create it each time
+        /** @override */
+        ContinuousForceDirectedLayout.prototype.doLayout = function (coll) {
+            if (!this._isObserving) {
+                this._isObserving = true;
+                // cacheing the network means we need to recreate it if nodes or links have been added or removed or relinked,
+                // so we need to track structural model changes to discard the saved network.
+                var lay = this;
+                this.diagram.addModelChangedListener(function (e) {
+                    // modelChanges include a few cases that we don't actually care about, such as
+                    // "nodeCategory" or "linkToPortId", but we'll go ahead and recreate the network anyway
+                    if (e.modelChange !== "") lay.network = null;
+                });
+            }
+            var net = this.network;
+            if (net === null) {  // the first time, just create the network as normal
+                this.network = net = this.makeNetwork(coll);
+            } else {  // but on reuse we need to update the LayoutVertex.bounds for selected nodes
+                this.diagram.nodes.each(function (n) {
+                    var v = net.findVertex(n);
+                    if (v !== null) v.bounds = n.actualBounds;
+                });
+            }
+            // now perform the normal layout
+            go.ForceDirectedLayout.prototype.doLayout.call(this, coll);
+            // doLayout normally discards the LayoutNetwork by setting Layout.network to null;
+            // here we remember it for next time
+            this.network = net;
+        }
+        //#endregion
+
+        function init() {
+            var $ = go.GraphObject.make;  // for conciseness in defining templates, avoid $ due to jQuery
+
+            myDiagram = $(go.Diagram, "myDiagramDiv",  // create a Diagram for the DIV HTML element
+                           {
+                               //initialAutoScale: go.Diagram.Uniform,
+                               contentAlignment: go.Spot.Center,
+                               validCycle: go.Diagram.CycleDestinationTree,
+                               //autoScale: go.Diagram.Uniform,
+                               layout: $(go.TreeLayout, { angle: 90 }),
+                               allowDrop: true,  // support drag-and-drop from the Palette
+
+                               "grid.visible": false,
+                               "toolManager.hoverDelay": 300,
+                               "SelectionMoved": function (e) { e.diagram.layout.invalidateLayout(); }
+                           });
+
+            myDiagram.layout.commitNodes = function () {
+                go.TreeLayout.prototype.commitNodes.call(myDiagram.layout);  // do the standard behavior
+            };
+
+            // dragging a node invalidates the Diagram.layout, causing a layout during the drag
+            //myDiagram.toolManager.draggingTool.doMouseMove = function () {
+            //    go.DraggingTool.prototype.doMouseMove.call(this);
+            //    if (this.isActive) { this.diagram.layout.invalidateLayout(); }
+            //}
+
+            myDiagram.addDiagramListener("ExternalObjectsDropped", function (e) {
+                //e.diagram.selection.each(function (obj) {
+                //    var isNode = obj instanceof go.Node;
+                //    if (isNode) {
+                //        obj.part.data = { key: "train_00x", type: "Train", name: "火车1", visible: "true", group: "train_000", image: "images/Train.jpg" };
+                //    }
+                //});
+            });
+
+            myDiagram.nodeTemplate =
+              $(go.Node, "Auto",
+                {
+                    selectionAdorned: true,
+                    toolTip: $(go.Adornment, "Auto",
+                              $(go.Shape, { fill: "lightyellow" }),
+                              $(go.Panel, "Vertical",
+                               $(go.TextBlock, "人员", { margin: 3 }))),
+                    mouseEnter: function (e, node) {
+                        node.diagram.clearHighlighteds();
+                        node.linksConnected.each(function (l) { highlightLink(l, true); });
+                        node.isHighlighted = true;
+                        var tb = node.findObject("NODE");
+                        if (tb !== null) tb.fill = highlightColor;
+                    },
+                    mouseLeave: function (e, node) {
+                        node.diagram.clearHighlighteds();
+                        var tb = node.findObject("NODE");
+                        if (tb !== null) tb.fill = "lightblue";
+                    }
+
+                },
+                //节点图形
+                $(go.Shape, "RoundedRectangle",
+                    {
+                        name: "NODE",
+                        fromLinkable: true,
+                        toLinkable: true,
+                        portId: "",
+                        height: 70,
+                        width: 170,
+                        cursor: "pointer"
+                    },
+                    new go.Binding("fill", "visible", function (v) { return v === "true" ? "lightblue" : "transparent"; }),
+                    new go.Binding("fill", "isHighlighted", function (h, shape) {
+                        if (h) {
+                            return highlightColor;
+                        }
+                        else {
+                            if (shape.part.data.visible === "true") {
+                                return "lightblue";
+                            }
+                            else {
+                                return "transparent";
+                            }
+                        }
+                    }).ofObject(),
+                    new go.Binding("stroke", "visible", function (v) { return v === "true" ? "green" : "transparent"; })
+                 ),
+                 //信息面板
+                 $(go.Panel, "Horizontal",
+                  {
+                      alignment: go.Spot.Left
+                  },
+                  new go.Binding("visible", "visible", function (v) { return v === "true" ? true : false; }),
+                  //照片信息
+                  $(go.Picture,
+                    {
+                        name: 'Picture',
+                        desiredSize: new go.Size(40, 50),
+                        margin: new go.Margin(5, 5, 5, 5)
+                    },
+                    new go.Binding("source", "image")),
+                  $(go.Panel, "Table",
+                    {
+                        maxSize: new go.Size(120, 999),
+                        margin: new go.Margin(5, 5, 5, 5),
+                        defaultAlignment: go.Spot.Left
+                    },
+                    $(go.RowColumnDefinition, { column: 2 }),
+                    //姓名信息
+                    $(go.TextBlock,
+                      {
+                          row: 0,
+                          column: 0,
+                          columnSpan: 2,
+                          wrap: go.TextBlock.None,
+                          font: "12pt Segoe UI,sans-serif"
+                      },
+                      new go.Binding("text", "name")),
+                    //年龄
+                    //$(go.TextBlock, "年龄: ",
+                    //  {
+                    //      row: 1,
+                    //      column: 0
+                    //  }),
+                    //年龄信息
+                    $(go.TextBlock,
+                      {
+                          row: 1,
+                          columnSpan: 2,
+                          column: 1
+                      },
+                      new go.Binding("text", "age", function (v) { return "年龄: " + v; })),
+                    ////职位
+                    //$(go.TextBlock, "职位: ",
+                    //  {
+                    //      row: 2,
+                    //      column: 0
+                    //  }),
+                    //职位信息
+                    $(go.TextBlock,
+                      {
+                          row: 2,
+                          column: 1,
+                          columnSpan: 2,
+                          wrap: go.TextBlock.None
+                      },
+                      new go.Binding("text", "position", function (v) { return "职位: " + v; }))
+                  )
+                )
+              );
+
+            myDiagram.linkTemplate =
+              $(
+                //链接
+                go.Link,
+                {
+                    selectionAdorned: true,
+                    routing: go.Link.Normal,
+                    curve: go.Link.JumpGap,
+                    relinkableFrom: true,
+                    relinkableTo: true,
+                    selectable: true,
+                    mouseEnter: function (e, link) { highlightLink(link, true); },
+                    mouseLeave: function (e, link) { highlightLink(link, false); }
+                },
+                //链接的线
+                $(go.Shape,
+                  {
+                      strokeWidth: 3
+                  },
+                  new go.Binding("stroke", "color"),
+                  new go.Binding("stroke", "isHighlighted", function (h, shape) { return h ? highlightColor : shape.part.data.color; }).ofObject()),
+                //链接的结束箭头
+                $(go.Shape,
+                  {
+                      toArrow: "Standard",
+                      scale: 1.5
+                  },
+                  new go.Binding("stroke", "color"),
+                  new go.Binding("fill", "color")),
+                //链接的文本
+                $(go.Panel, "Auto",
+                  $(go.TextBlock, "transition",
+                    {
+                        name: "LINK",
+                        textAlign: "center",
+                        font: "9pt helvetica, arial, sans-serif",
+                        margin: 4,
+                    },
+                    new go.Binding("text", "text"),
+                    new go.Binding("visible", "color", function (v) { return v === "transparent" ? false : true; })
+                  )
+                )
+              );
+
+            myDiagram.nodeTemplate.contextMenu =
+              $(go.Adornment, "Vertical",
+                $("ContextMenuButton",
+                  $(go.TextBlock, "关联飞机信息"),
+                  {
+                      name: "plane",
+                      click: function (e, obj) {
+                          getSubDatas(e, obj, "Airplane");
+                      }
+                  }
+                ),
+                $("ContextMenuButton",
+                  $(go.TextBlock, "关联火车信息"),
+                  {
+                      click: function (e, obj) {
+                          getSubDatas(e, obj, "Train");
+                      }
+                  }
+                ),
+                $("ContextMenuButton",
+                  $(go.TextBlock, "关联巴士信息"),
+                  {
+                      click: function (e, obj) {
+                          getSubDatas(e, obj, "Bus");
+                      }
+                  }
+                )
+              );
+
+            myDiagram.nodeTemplateMap.add("Person",
+              $(go.Node, "Auto",
+                {
+                    //提示框
+                    toolTip: $(go.Adornment, "Auto",
+                              $(go.Shape, { fill: "lightyellow" }),
+                              $(go.Panel, "Vertical",
+                               $(go.TextBlock, "人员", { margin: 3 })))
+                },
+                //节点图形
+                $(go.Shape, "RoundedRectangle",
+                    {
+                        fromLinkable: true,
+                        toLinkable: true,
+                        portId: "",
+                        height: 70,
+                        width: 170,
+                        fill: "lightblue",
+                        cursor: "pointer"
+                    },
+                    new go.Binding("fill", "visible", function (v) { return v === "true" ? "lightblue" : "transparent"; }),
+                    new go.Binding("stroke", "visible", function (v) { return v === "true" ? "green" : "transparent"; })
+                 ),
+                 //信息面板
+                 $(go.Panel, "Horizontal",
+                  {
+                      alignment: go.Spot.Left
+                  },
+                  new go.Binding("visible", "visible", function (v) { return v === "true" ? true : false; }),
+                  //照片信息
+                  $(go.Picture,
+                    {
+                        name: 'Picture',
+                        desiredSize: new go.Size(40, 50),
+                        source: "images/default.png",
+                        margin: new go.Margin(5, 5, 5, 5)
+                    }
+                    //new go.Binding("source", "image", function (v) { return v === null ? "" : ""; })
+                  ),
+                  $(go.Panel, "Table",
+                    {
+                        maxSize: new go.Size(120, 999),
+                        margin: new go.Margin(5, 5, 5, 5),
+                        defaultAlignment: go.Spot.Left
+                    },
+                    $(go.RowColumnDefinition, { column: 2 }),
+                    //姓名信息
+                    $(go.TextBlock,
+                      {
+                          minSize: new go.Size(60, 10),
+                          editable: true,
+                          row: 0,
+                          column: 0,
+                          columnSpan: 2,
+                          wrap: go.TextBlock.None,
+                          font: "12pt Segoe UI,sans-serif"
+                      },
+                      new go.Binding("text", "name")),
+                    //年龄
+                    $(go.TextBlock, "年龄: ",
+                      {
+                          row: 1,
+                          column: 0
+                      }),
+                    //年龄信息
+                    $(go.TextBlock,
+                      {
+                          minSize: new go.Size(40, 10),
+                          editable: true,
+                          row: 1,
+                          column: 1
+                      },
+                      new go.Binding("text", "age")),
+                    //职位
+                    $(go.TextBlock, "职位: ",
+                      {
+                          row: 2,
+                          column: 0
+                      }),
+                    //职位信息
+                    $(go.TextBlock,
+                      {
+                          minSize: new go.Size(40, 10),
+                          editable: true,
+                          row: 2,
+                          column: 1,
+                          wrap: go.TextBlock.None
+                      },
+                      new go.Binding("text", "position"))
+                  )
+                )
+              )
+            );
+
+            myDiagram.nodeTemplateMap.add("Airplane",
+              $(go.Node, "Auto",
+                //节点图形
+                $(go.Shape, "RoundedRectangle",
+                    {
+                        fromLinkable: true,
+                        toLinkable: true,
+                        portId: "",
+                        height: 70,
+                        width: 170,
+                        fill: "lightblue",
+                        cursor: "pointer"
+                    },
+                    new go.Binding("fill", "visible", function (v) { return v === "true" ? "lightblue" : "transparent"; }),
+                    new go.Binding("stroke", "visible", function (v) { return v === "true" ? "green" : "transparent"; })
+                 ),
+                 //信息面板
+                 $(go.Panel, "Horizontal",
+                  {
+                      alignment: go.Spot.Left
+                  },
+                  new go.Binding("visible", "visible", function (v) { return v === "true" ? true : false; }),
+                  //照片信息
+                  $(go.Picture,
+                    {
+                        name: 'Picture',
+                        desiredSize: new go.Size(40, 50),
+                        source: "images/Airplane.jpg",
+                        margin: new go.Margin(5, 5, 5, 5)
+                    }
+                  ),
+                  $(go.Panel, "Table",
+                    {
+                        maxSize: new go.Size(120, 999),
+                        margin: new go.Margin(5, 5, 5, 5),
+                        defaultAlignment: go.Spot.Left
+                    },
+                    $(go.RowColumnDefinition, { column: 2 }),
+                    //姓名信息
+                    $(go.TextBlock,
+                      {
+                          minSize: new go.Size(60, 10),
+                          editable: true,
+                          row: 0,
+                          column: 0,
+                          columnSpan: 2,
+                          wrap: go.TextBlock.None,
+                          font: "12pt Segoe UI,sans-serif"
+                      },
+                      new go.Binding("text", "name"))
+                   )
+                  )
+               )
+            );
+
+            myDiagram.nodeTemplateMap.add("Train",
+             $(go.Node, "Auto",
+               //节点图形
+               $(go.Shape, "RoundedRectangle",
+                   {
+                       fromLinkable: true,
+                       toLinkable: true,
+                       portId: "",
+                       height: 70,
+                       width: 170,
+                       fill: "lightblue",
+                       cursor: "pointer"
+                   },
+                   new go.Binding("fill", "visible", function (v) { return v === "true" ? "lightblue" : "transparent"; }),
+                   new go.Binding("stroke", "visible", function (v) { return v === "true" ? "green" : "transparent"; })
+                ),
+                //信息面板
+                $(go.Panel, "Horizontal",
+                 {
+                     alignment: go.Spot.Left
+                 },
+                 new go.Binding("visible", "visible", function (v) { return v === "true" ? true : false; }),
+                 //照片信息
+                 $(go.Picture,
+                   {
+                       name: 'Picture',
+                       desiredSize: new go.Size(40, 50),
+                       source: "images/Train.jpg",
+                       margin: new go.Margin(5, 5, 5, 5)
+                   }
+                 ),
+                 $(go.Panel, "Table",
+                   {
+                       maxSize: new go.Size(120, 999),
+                       margin: new go.Margin(5, 5, 5, 5),
+                       defaultAlignment: go.Spot.Left
+                   },
+                   $(go.RowColumnDefinition, { column: 2 }),
+                   //姓名信息
+                   $(go.TextBlock,
+                     {
+                         minSize: new go.Size(60, 10),
+                         editable: true,
+                         row: 0,
+                         column: 0,
+                         columnSpan: 2,
+                         wrap: go.TextBlock.None,
+                         font: "12pt Segoe UI,sans-serif"
+                     },
+                     new go.Binding("text", "name"))
+                  )
+                 )
+              )
+           );
+
+            myDiagram.nodeTemplateMap.add("Bus",
+             $(go.Node, "Auto",
+               //节点图形
+               $(go.Shape, "RoundedRectangle",
+                   {
+                       fromLinkable: true,
+                       toLinkable: true,
+                       portId: "",
+                       height: 70,
+                       width: 170,
+                       fill: "lightblue",
+                       cursor: "pointer"
+                   },
+                   new go.Binding("fill", "visible", function (v) { return v === "true" ? "lightblue" : "transparent"; }),
+                   new go.Binding("stroke", "visible", function (v) { return v === "true" ? "green" : "transparent"; })
+                ),
+                //信息面板
+                $(go.Panel, "Horizontal",
+                 {
+                     alignment: go.Spot.Left
+                 },
+                 new go.Binding("visible", "visible", function (v) { return v === "true" ? true : false; }),
+                 //照片信息
+                 $(go.Picture,
+                   {
+                       name: 'Picture',
+                       desiredSize: new go.Size(40, 50),
+                       source: "images/Bus.jpg",
+                       margin: new go.Margin(5, 5, 5, 5)
+                   }
+                 ),
+                 $(go.Panel, "Table",
+                   {
+                       maxSize: new go.Size(120, 999),
+                       margin: new go.Margin(5, 5, 5, 5),
+                       defaultAlignment: go.Spot.Left
+                   },
+                   $(go.RowColumnDefinition, { column: 2 }),
+                   //姓名信息
+                   $(go.TextBlock,
+                     {
+                         minSize: new go.Size(60, 10),
+                         editable: true,
+                         row: 0,
+                         column: 0,
+                         columnSpan: 2,
+                         wrap: go.TextBlock.None,
+                         font: "12pt Segoe UI,sans-serif"
+                     },
+                     new go.Binding("text", "name"))
+                  )
+                 )
+              )
+           );
+
+            myDiagram.groupTemplate =
+              $(go.Group, "Spot",
+                {
+                    selectionAdornmentTemplate: // adornment when a group is selected
+                      $(go.Adornment, "Auto",
+                        $(go.Shape, "Rectangle",
+                          { fill: null, stroke: "dodgerblue", strokeWidth: 3 }),
+                        $(go.Placeholder)
+                      ),
+                    toSpot: go.Spot.AllSides, // links coming into groups at any side
+                    toEndSegmentLength: 30, fromEndSegmentLength: 30,
+                    computesBoundsAfterDrag: false,
+                    mouseDrop: finishDrop,
+                    handlesDragDropForMembers: false
+                },
+                new go.Binding("layout", "key", function (v) {
+                    switch (v) {
+                        case "air_000":
+                            return $(go.TreeLayout);
+                        case "train_000":
+                            return $(go.CircularLayout);
+                        default:
+                            return $(go.ForceDirectedLayout);
+                    }
+                }),
+                $(go.Panel, "Auto",
+                  $(go.Shape, "Rectangle",
+                    {
+                        name: "OBJSHAPE",
+                        parameter1: 14,
+                        fill: "transparent",
+                        //desiredSize: new go.Size(0, 0)
+                    }),
+                  $(go.Placeholder,
+                    { padding: 16 })
+                )
+              );
+
+            myPalette =
+              $(go.Palette, "myPalette",  // create a new Palette in the HTML DIV element "palette"
+                {
+                    // share the template map with the Palette
+                    nodeTemplateMap: myDiagram.nodeTemplateMap,
+                    autoScale: go.Diagram.Uniform  // everything always fits in viewport
+                });
+
+            //myPalette.model.nodeDataArray = [
+            //  { category: "Person" },
+            //  { category: "Airplane" },
+            //  { category: "Train" },
+            //  { category: "Bus" }
+            //];
+
+            // Overview
+            myOverview =
+              $(go.Overview, "myOverviewDiv",  // the HTML DIV element for the Overview
+                {
+                    observed: myDiagram,
+                    contentAlignment: go.Spot.Center
+                });   // tell it which Diagram to show and pan
+
+            // Here we request XML-format text data from the server, in this case from a static file.
+            //jQuery.ajax({
+            //    url: "xml/Test.xml",
+            //    success: load,
+            //    dataType: "xml"
+            //});
+
+            jQuery.getJSON("json/Person.js", load)
+        }
+
+        function finishDrop(e, grp) {
+            //var ok = (grp !== null
+            //          ? grp.addMembers(grp.diagram.selection, true)
+            //          : e.diagram.commandHandler.addTopLevelParts(e.diagram.selection, true));
+            //if (!ok) e.diagram.currentTool.doCancel();
+
+            var ok = "0";
+            if (grp !== null) {
+                grp.diagram.selection.each(function (x) {
+                    var isNode = x instanceof go.Node;
+                    if (isNode === false || x.data.type !== grp.data.type) {
+                        ok = "2";
+                    }
+                });
+            }
+            else {
+                ok = "1";
+            }
+
+            if (ok === "0") {
+                grp.addMembers(grp.diagram.selection, true);
+            }
+            else if (ok === "1") {
+                e.diagram.commandHandler.addTopLevelParts(e.diagram.selection, true)
+            }
+            else {
+                e.diagram.currentTool.doCancel();
+            }
+        }
+
+        function highlightLink(link, show) {
+            link.isHighlighted = show;
+            link.fromNode.isHighlighted = show;
+            link.toNode.isHighlighted = show;
+
+            //var text = link.findObject("LINK");
+            //text.text = "xx";
+        }
+
+        function load(data) {
+            myDiagram.model = go.Model.fromJson(data);
+
+            //var $ = go.GraphObject.make
+            //var adornment = myDiagram.nodeTemplate.contextMenu.part;
+            //var panel = $("ContextMenuButton");
+            //var text = new go.TextBlock();
+            //text.text = "Test";
+            //panel.add(text);
+            //panel.background = "red";
+            //panel.click = function (e, obj) {
+            //    getSubDatas(e, obj, "Bus");
+            //}
+            //adornment.add(panel);
+
+            if (myDiagram.model.nodeDataArray.length > 0) {
+                var firstNode = myDiagram.model.nodeDataArray[0];
+                myPalette.model.addNodeData(firstNode);
+                myPalette.model.setCategoryForNodeData(firstNode, firstNode.type);
+            }
+        }
+
+        function filter(color, level, obj) {
+            myDiagram.startTransaction("Update");
+
+            var fromColor;
+            var toColor;
+
+            if (obj.checked === false) {
+                //obj.style.backgroundColor = "gray";
+                fromColor = color;
+                targetColor = "transparent";
+            }
+            else {
+                //obj.style.backgroundColor = color;
+                fromColor = "transparent";
+                targetColor = color;
+            }
+
+            for (var i = 0; i < myDiagram.model.linkDataArray.length; i++) {
+                var linkdata = myDiagram.model.linkDataArray[i];
+                if (linkdata === null || linkdata === undefined) {
+                    continue;
+                }
+                if (linkdata.level === level) {
+                    linkdata.color = targetColor;
+                }
+
+                var link = myDiagram.findLinkForData(linkdata);
+                if (link !== null) {
+                    link.updateTargetBindings();
+                }
+            }
+
+            myDiagram.commitTransaction("Update");
+        }
+
+        function filterNode(obj) {
+            myDiagram.startTransaction("Update");
+
+            var visible;
+
+            if (obj.checked) {
+                visible = "true";
+            }
+            else {
+                visible = "false";
+            }
+
+            for (var i = 0; i < myDiagram.model.nodeDataArray.length; i++) {
+                var nodedata = myDiagram.model.nodeDataArray[i];
+                if (nodedata === null || nodedata === undefined) {
+                    continue;
+                }
+
+                if (nodedata.visible !== visible) {
+                    nodedata.visible = visible;
+                }
+
+                var node = myDiagram.findNodeForData(nodedata);
+                if (node !== null) {
+                    node.updateTargetBindings();
+                }
+            }
+
+            myDiagram.commitTransaction("Update");
+        }
+
+        function filterLayout(obj) {
+            myDiagram.startTransaction("Layout");
+
+            if (obj.checked) {
+                var layout;
+                var layoutType;
+
+                switch (obj.value) {
+                    case "TreeLayout":
+                        layout = new go.TreeLayout();
+                        break;
+                    case "CircularLayout":
+                        layout = new go.CircularLayout();
+                        break;
+                    case "ForceDirectedLayout":
+                        layout = new go.ForceDirectedLayout();
+                        break;
+                    case "ContinuousForceDirectedLayout":
+                        layout = new ContinuousForceDirectedLayout();
+                        layout.defaultSpringLength = 30;
+                        layout.defaultElectricalCharge = 100
+                        break;
+                    case "LayeredDigraphLayout":
+                        layout = new go.LayeredDigraphLayout();
+                        break;
+                    default:
+                        layout = new go.GridLayout();
+                        break;
+                }
+
+                layout.isInitial = true;
+                //layout.isOngoing = false;
+
+                myDiagram.layout = layout;
+            }
+
+            myDiagram.commitTransaction("Layout");
+        }
+
+        function getSubDatas(e, obj, type) {
+            var adorn = obj.part;
+            //var diagram = adorn.diagram;
+            //diagram.startTransaction("Add Node");
+            var oldnode = adorn.adornedPart;
+            var olddata = oldnode.data;
+
+            if (olddata.age !== null || olddata.age !== undefined) {
+                jQuery.ajax({
+                    url: "json/" + type + "_" + olddata.key + ".js",
+                    success: function (json) {
+
+                        myDiagram.startTransaction("Add Node");
+                        var nodeArray = json.nodeDataArray;
+                        for (var i = 0; i < nodeArray.length; i++) {
+                            var node = nodeArray[i];
+
+                            if (myDiagram.model.findNodeDataForKey(node.key) === null) {
+                                myDiagram.model.addNodeData(node);
+                            }
+                        }
+
+                        var linkArray = json.linkDataArray;
+                        for (var i = 0; i < linkArray.length; i++) {
+                            var link = linkArray[i];
+                            var isExist = false;
+
+                            for (var j = 0; j < myDiagram.model.linkDataArray.length; j++) {
+                                var tempLinkData = myDiagram.model.linkDataArray[j];
+                                if (tempLinkData.from === link.from
+                                    && tempLinkData.to === link.to) {
+                                    isExist = true;
+                                    break;
+                                }
+                            }
+
+                            if (isExist === false) {
+                                myDiagram.model.addLinkData(link);
+                            }
+                        }
+
+                        if (nodeArray !== null && nodeArray.length > 2) {
+                            var isExisted = false;
+                            var firstNode = nodeArray[1];
+                            for (var i = 0; i < myPalette.model.nodeDataArray.length; i++) {
+                                var tempNode = myPalette.model.nodeDataArray[i];
+                                if (tempNode.type === firstNode.type) {
+                                    isExisted = true;
+                                    break;
+                                }
+                            }
+
+                            if (isExisted === false) {
+                                myPalette.model.addNodeData(firstNode);
+                                myPalette.model.setCategoryForNodeData(firstNode, firstNode.type);
+                            }
+                        }
+
+                        myDiagram.commitTransaction("Add Node");
+                    },
+                    dataType: "json"
+                });
+            }
+
+            //diagram.commitTransaction("Add Node");
+        }
+    </script>
+</head>
+<body onload="init()">
+    <div id="sample">
+        <table style="width: 1850px; height: 900px;background-color:antiquewhite;">
+            <tr>
+                <td style="width: 10%; vertical-align:top">
+                    <div id="myPalette" style="border: solid 1px black; height: 480px"></div>
+                </td>
+                <td>
+                    <div id="myDiagramDiv" style="border: solid 1px black; height:900px;"></div>
+                    <div id="myOverviewDiv"></div>
+                </td>
+                <td style="width: 10%; vertical-align:top">
+                    <div style="border: solid 1px black;">
+                        <!--<button id="FilterButton1" style="width: 100px; height: 20px; background-color: lightgreen" onclick="filter('lightgreen', '1',this)">lightgreen</button>
+                        <button id="FilterButton2" style="width: 100px; height: 20px; background-color: orange; " onclick="filter('orange', '2', this)">orange</button>
+                        <button id="FilterButton3" style="width: 100px; height: 20px; background-color: skyblue; " onclick="filter('skyblue', '3', this)">skyblue</button>-->
+                        <table>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" style="width: 15px; height: 15px; " onchange="filter('lightgreen', '1', this)" checked="checked" />
+                                </td>
+                                <td>
+                                    <hr style="width: 100px; height: 10px; background-color: lightgreen; " />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" style="width: 15px; height: 15px; " onchange="filter('orange', '2', this)" checked="checked" />
+                                </td>
+                                <td>
+                                    <hr style="width: 100px; height: 10px; background-color: orange; " />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" style="width: 15px; height: 15px; " onchange="filter('skyblue', '3', this)" checked="checked" />
+                                </td>
+                                <td>
+                                    <hr style="width: 100px; height: 10px; background-color: skyblue; " />
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <br />
+                    <div style="border: solid 1px black;">
+                        <table>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" style="width: 15px; height: 15px; " onchange="filterNode(this)" checked="checked" />
+                                </td>
+                                <td>
+                                    <label style="color: black; width: 15px; height: 15px; font: 12pt Segoe UI,sans-serif; ">人员</label>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <br />
+                    <div style="border: solid 1px black;">
+                        <table>
+                            <tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap:none" name="layout" value="TreeLayout" onchange="filterLayout(this)" />TreeLayout
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap: none" name="layout" value="CircularLayout" onchange="filterLayout(this)" />CircularLayout
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap: none" name="layout" value="ForceDirectedLayout" onchange="filterLayout(this)" />ForceDirectedLayout
+                                </td>
+                            </tr>
+                            <!--<tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap: none" name="layout" value="ContinuousForceDirectedLayout" onchange="filterLayout(this)" />ContinuousForceDirectedLayout
+                                </td>
+                            </tr>-->
+                            <tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap: none" name="layout" value="LayeredDigraphLayout" onchange="filterLayout(this)" />LayeredDigraphLayout
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="radio" style="width: 15px; height: 15px; text-wrap: none" name="layout" value="GridLayout" onchange="filterLayout(this)" />GridLayout
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <div>
+            <textarea id="Person" style="width: 0px; height: 0px">
+                { "class": "go.GraphLinksModel",
+                "nodeDataArray": [
+                {"key":"id_001", "visible":"true", "type":"Person", "name":"Stella Payne Diaz", "age":"35", "position":"CEO"               , "image":"images/HS1.png"  },
+                {"key":"id_002", "visible":"true", "type":"Person", "name":"Luke Warm"        , "age":"34", "position":"VP Marketing/Sales", "image":"images/HS2.png"  },
+                {"key":"id_003", "visible":"true", "type":"Person", "name":"Meg Meehan Hoffa" , "age":"33", "position":"Sales"             , "image":"images/HS3.png"  },
+                {"key":"id_004", "visible":"true", "type":"Person", "name":"Peggy Flaming"    , "age":"32", "position":"VP Engineering"    , "image":"images/HS4.png"  },
+                {"key":"id_005", "visible":"true", "type":"Person", "name":"Saul Wellingood"  , "age":"31", "position":"Manufacturing"     , "image":"images/HS5.png"  },
+                {"key":"id_006", "visible":"true", "type":"Person", "name":"Al Ligori"        , "age":"30", "position":"Marketing"         , "image":"images/HS6.png"  },
+                {"key":"id_007", "visible":"true", "type":"Person", "name":"Dot Stubadd"      , "age":"29", "position":"Sales Rep"         , "image":"images/HS7.png"  },
+                {"key":"id_008", "visible":"true", "type":"Person", "name":"Les Ismore"       , "age":"28", "position":"Project Mgr"       , "image":"images/HS8.png"  },
+                {"key":"id_009", "visible":"true", "type":"Person", "name":"April Lynn Parris", "age":"27", "position":"Events Mgr"        , "image":"images/HS9.png"  },
+                {"key":"id_010", "visible":"true", "type":"Person", "name":"Xavier Breath"    , "age":"26", "position":"Engineering"       , "image":"images/HS10.png" },
+                {"key":"id_011", "visible":"true", "type":"Person", "name":"Anita Hammer"     , "age":"25", "position":"Process"           , "image":"images/HS11.png" },
+                {"key":"id_012", "visible":"true", "type":"Person", "name":"Billy Aiken"      , "age":"24", "position":"Software"          , "image":"images/HS12.png" },
+                {"key":"id_013", "visible":"true", "type":"Person", "name":"Stan Wellback"    , "age":"23", "position":"Testing"           , "image":"images/HS13.png" },
+                {"key":"id_014", "visible":"true", "type":"Person", "name":"Marge Innovera"   , "age":"22", "position":"Hardware"          , "image":"images/HS14.png" },
+                {"key":"id_015", "visible":"true", "type":"Person", "name":"Evan Elpus"       , "age":"21", "position":"Quality"           , "image":"images/HS15.png" },
+                {"key":"id_016", "visible":"true", "type":"Person", "name":"Lotta B. Essen"   , "age":"20", "position":"Sales Rep"         , "image":"images/HS16.png" }
+                ],
+                "linkDataArray": [
+                {"from":"id_001", "to":"id_002", "text":"人际", "level":"1", "color":"lightgreen" },
+                {"from":"id_002", "to":"id_003", "text":"人际", "level":"2", "color":"orange"     },
+                {"from":"id_001", "to":"id_004", "text":"人际", "level":"1", "color":"lightgreen" },
+                {"from":"id_004", "to":"id_005", "text":"人际", "level":"2", "color":"orange"     },
+                {"from":"id_002", "to":"id_006", "text":"人际", "level":"2", "color":"orange"     },
+                {"from":"id_003", "to":"id_007", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_005", "to":"id_008", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_006", "to":"id_009", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_004", "to":"id_010", "text":"人际", "level":"2", "color":"orange"     },
+                {"from":"id_005", "to":"id_011", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_010", "to":"id_012", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_010", "to":"id_013", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_010", "to":"id_014", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_005", "to":"id_015", "text":"人际", "level":"3", "color":"skyblue"    },
+                {"from":"id_003", "to":"id_016", "text":"人际", "level":"3", "color":"skyblue"    }
+                ]}
+            </textarea>
+        </div>
+    </div>
+</body>
+</html>
