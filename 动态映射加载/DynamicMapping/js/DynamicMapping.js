@@ -38,7 +38,7 @@ function loadData() {
 
     var model = wholeDiagram.model;
 
-    generateNodes(model, 5000, 5000);
+    generateNodes(model, 3000, 3000);
     generateLinks(model, 5, 5);
 
     //wholeDiagram.layoutDiagram(true);
