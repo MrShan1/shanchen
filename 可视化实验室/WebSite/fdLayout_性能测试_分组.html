@@ -139,7 +139,9 @@
             group();
 
             // perform a diagram layout with the latest parameters
-            layout();
+            //layout();
+            myDiagram.layoutDiagram(true);
+
             myDiagram.commitTransaction("generateTree");
         }
 
@@ -205,26 +207,30 @@
         }
 
         function group() {
-            var groupDatas = new go.Set();
+            var groupDatas = new go.Map();
 
             myDiagram.nodes.each(function (node) {
                 var neighbors = node.findNodesConnected();
 
                 if (neighbors.count === 1) {
                     var neighbor = neighbors.first();
+                    var groupKey = neighbor.data.key + "_group";
 
-                    var groupData = {
-                        key: neighbor.data.key + "_group",
-                        isGroup: true,
-                    };
+                    if (!groupDatas.has(groupKey)) {
+                        var groupData = {
+                            key: groupKey,
+                            isGroup: true,
+                        };
 
-                    groupDatas.add(groupData);
-                    myDiagram.model.setGroupKeyForNodeData(node.data, groupData.key);
-                    myDiagram.model.setGroupKeyForNodeData(neighbor.data, groupData.key);
+                        groupDatas.add(groupKey, groupData);
+                    }
+
+                    myDiagram.model.setGroupKeyForNodeData(node.data, groupKey);
+                    myDiagram.model.setGroupKeyForNodeData(neighbor.data, groupKey);
                 }
             });
 
-            myDiagram.model.addNodeDataCollection(groupDatas);
+            myDiagram.model.addNodeDataCollection(groupDatas.iteratorValues);
         };
 
         // Update the layout from the controls.
