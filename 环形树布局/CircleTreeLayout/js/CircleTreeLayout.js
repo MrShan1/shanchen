@@ -117,6 +117,18 @@ RadialTreeNetwork.prototype.createVertex = function () {
     return new RadialTreeVertex();
 };
 
+RadialTreeNetwork.prototype.findVertexByKey = function (key) {
+    var iterator = this.vertexes.iterator;
+
+    while (iterator.next()) {
+        var vertex = iterator.value;
+
+        if (vertex.data) {
+
+        }
+    }
+};
+
 //#endregion 径向树网络
 
 
