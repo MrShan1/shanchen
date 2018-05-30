@@ -8,12 +8,10 @@
 function RadialTreeLayout() {
     go.Layout.call(this);
 
-    // 预定义根顶点的主键集合
-    this.defaultRootKeys = new go.List();
-    // 预定义根顶点集合
-    this.defaultRootVertexs = new go.List();
+    // 预定义根顶点对应的节点集合
+    this.defaultRootNodes = new go.List();
     // 根顶点集合
-    this.rootVertexs = new go.List();
+    this.rootVertexes = new go.List();
     // 子树的划分模式,默认依据方向划分
     this.splitMode = RadialTreeLayout.SplitByDirection;
 };
@@ -61,11 +59,29 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
     }
 };
 
-RadialTreeLayout.prototype.getTrees = function (network) {
-    var vertexs = new go.List().addAll(network.vertexs);
+RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
+    var coll = new go.List();
 
-    while (vertexs.count > 0) {
-        var first = vertexs.first();
+    if (this.network === null) return vertexes;
+
+    var iterator = this.defaultRootNodes.iterator;
+    while (iterator.next()) {
+        var node = iterator.value;
+        var vertex = this.network.findVertex(node);
+
+        if (vertex && !vertexes.contains(vertex)) {
+            coll.add(vertex);
+        }
+    }
+
+    return coll;
+};
+
+RadialTreeLayout.prototype.getTrees = function (network) {
+    var vertexes = new go.List().addAll(network.vertexes);
+
+    while (vertexes.count > 0) {
+        var first = vertexes.first();
         var tree = new RadialTree();
 
     }
@@ -74,8 +90,8 @@ RadialTreeLayout.prototype.getTrees = function (network) {
 RadialTreeLayout.prototype.buildTreeRelation = function (network) {
     //var 
 
-    //while (vertexs.count > 0) {
-    //    var first = vertexs.first();
+    //while (vertexes.count > 0) {
+    //    var first = vertexes.first();
     //    var tree = new RadialTree();
 
     //}
@@ -155,7 +171,7 @@ go.Diagram.inherit(RadialTreeVertex, go.LayoutVertex);
 *
 * @return {go.Set} 相关顶点集合
 */
-RadialTreeVertex.prototype.getRelativeVertexs = function () {
+RadialTreeVertex.prototype.getRelativeVertexes = function () {
     var coll = new go.Set();
     var iterator = this.vertexes.iterator; // 直接关联的顶点集合
 
@@ -165,7 +181,7 @@ RadialTreeVertex.prototype.getRelativeVertexs = function () {
         // 将该顶点添加至结果集合
         coll.add(vertex);
         // 将该的相关顶点集合添加至结果集中
-        coll.addAll(vertex.getRelativeVertexs());
+        coll.addAll(vertex.getRelativeVertexes());
     }
 
     return coll;
@@ -219,7 +235,7 @@ function RadialTree() {
     // 根顶点
     this.root = null;
     // 顶点集合
-    this.vertexs = new go.List();
+    this.vertexes = new go.List();
 };
 
 //#endregion 径向树
