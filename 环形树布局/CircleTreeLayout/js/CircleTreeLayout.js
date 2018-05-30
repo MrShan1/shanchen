@@ -35,6 +35,7 @@ RadialTreeLayout.SplitByRoot = new go.EnumValue(RadialTreeLayout, "SplitByRoot",
 * 生成布局网络
 *
 * @return {RadialTreeNetwork} 径向树网络
+* @override
 */
 RadialTreeLayout.prototype.createNetwork = function () {
     return new RadialTreeNetwork();
@@ -55,14 +56,22 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
 
 
     if (this.splitMode === RadialTreeLayout.SplitByRoot) {
+        
+    }
+    else {
 
     }
 };
 
+/**
+* 获取默认的根顶点集合
+*
+* @return {go.List} 根顶点集合
+*/
 RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
     var coll = new go.List();
 
-    if (this.network === null) return vertexes;
+    if (this.network === null) return coll;
 
     var iterator = this.defaultRootNodes.iterator;
     while (iterator.next()) {
@@ -87,14 +96,31 @@ RadialTreeLayout.prototype.getTrees = function (network) {
     }
 };
 
-RadialTreeLayout.prototype.buildTreeRelation = function (network) {
-    //var 
+RadialTreeLayout.prototype.buildTreeRelation = function () {
+    if (this.network === null) return;
 
-    //while (vertexes.count > 0) {
-    //    var first = vertexes.first();
-    //    var tree = new RadialTree();
+    var iterator = this.network.vertexes.iterator;
+    while (iterator.next()) {
+        var vertex = iterator.value;
 
-    //}
+        vertex.setParent();
+        vertex.setChildren();
+    }
+};
+
+RadialTreeLayout.prototype.buildTreeRelationByRoots = function () {
+    if (this.network === null) return;
+
+    // 获取默认的根顶点集合
+    var defaultRoots = this.getDefaultRootVertexes();
+
+    var iterator = this.network.vertexes.iterator;
+    while (iterator.next()) {
+        var vertex = iterator.value;
+
+        vertex.setParent();
+        vertex.setChildren();
+    }
 };
 
 //#endregion 径向树布局
@@ -187,13 +213,13 @@ RadialTreeVertex.prototype.getRelativeVertexes = function () {
     return coll;
 };
 
-RadialTreeVertex.prototype.getParent = function () {
+RadialTreeVertex.prototype.setParent = function () {
     if (this.parent === null && this.sourceVertexes.count > 0) {
         this.parent = this.sourceVertexes.first();
     }
 };
 
-RadialTreeVertex.prototype.getChildren = function () {
+RadialTreeVertex.prototype.setChildren = function () {
     var iterator = this.destinationVertexes.iterator;
 
     while (iterator.next()) {
