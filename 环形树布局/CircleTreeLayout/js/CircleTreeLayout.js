@@ -56,7 +56,7 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
 
 
     if (this.splitMode === RadialTreeLayout.SplitByRoot) {
-        
+
     }
     else {
 
@@ -118,7 +118,7 @@ RadialTreeLayout.prototype.buildTreeRelationByRoots = function () {
     while (iterator.next()) {
         var vertex = iterator.value;
 
-        vertex.setParent();
+        //vertex.setParent();
         vertex.setChildren();
     }
 };
@@ -185,7 +185,7 @@ RadialTreeNetwork.prototype.findVertexByKey = function (key) {
 function RadialTreeVertex() {
     go.LayoutVertex.call(this);
 
-    this.parent = null;
+    this._parent = null;
     this.children = new go.List();
 };
 go.Diagram.inherit(RadialTreeVertex, go.LayoutVertex);
@@ -213,23 +213,39 @@ RadialTreeVertex.prototype.getRelativeVertexes = function () {
     return coll;
 };
 
-RadialTreeVertex.prototype.setParent = function () {
-    if (this.parent === null && this.sourceVertexes.count > 0) {
-        this.parent = this.sourceVertexes.first();
-    }
-};
+//RadialTreeVertex.prototype.setParent = function () {
+//    if (this.parent === null && this.sourceVertexes.count > 0) {
+//        var first = this.sourceVertexes.first();
+
+//        this.parent = first;
+//        first.children.add(this);
+//    }
+//};
 
 RadialTreeVertex.prototype.setChildren = function () {
     var iterator = this.destinationVertexes.iterator;
 
     while (iterator.next()) {
         var vertex = iterator.value;
-        if (vertex.parent === null) {
-            this.children.add(vertex);
+        if (vertex !== this && vertex.parent === null) {
+            vertex.parent = this;
         }
     }
 
 };
+
+Object.defineProperty(RadialTreeVertex.prototype, "parent", {
+    get: function () {
+        return this._parent;
+    },
+    set: function (value) {
+        this._parent = value;
+
+        if (value && !value.children.contains(this)) {
+            value.children.add(this);
+        }
+    }
+});
 
 //#endregion 径向树顶点
 
