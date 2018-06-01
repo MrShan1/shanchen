@@ -53,7 +53,8 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
         this.network = this.makeNetwork(coll);
     }
 
-
+    // 获取默认的根顶点集合
+    var defaultRoots = this.getDefaultRootVertexes();
 
     if (this.splitMode === RadialTreeLayout.SplitByRoot) {
 
@@ -69,7 +70,7 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
 * @return {go.List} 根顶点集合
 */
 RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
-    var coll = new go.List();
+    var coll = new go.Set();
 
     if (this.network === null) return coll;
 
@@ -78,7 +79,7 @@ RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
         var node = iterator.value;
         var vertex = this.network.findVertex(node);
 
-        if (vertex && !vertexes.contains(vertex)) {
+        if (vertex) {
             coll.add(vertex);
         }
     }
@@ -96,23 +97,27 @@ RadialTreeLayout.prototype.getTrees = function (network) {
     }
 };
 
-RadialTreeLayout.prototype.buildTreeRelation = function () {
+RadialTreeLayout.prototype.buildTreeRelations = function (defaultRoots) {
     if (this.network === null) return;
 
-    var iterator = this.network.vertexes.iterator;
-    while (iterator.next()) {
-        var vertex = iterator.value;
+    defaultRoots.each(function (root) {
+        if (root.parent !== null || root.layerIndex !== Infinity) return;
 
-        vertex.setParent();
-        vertex.setChildren();
-    }
+        root.layerIndex = 0;
+        root.buildTreeRelation();
+
+    });
+
+    this.network.vertexes.each(function (vertex) {
+        if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
+
+        vertex.layerIndex = 0;
+        vertex.buildTreeRelation();
+    });
 };
 
-RadialTreeLayout.prototype.buildTreeRelationByRoots = function () {
+RadialTreeLayout.prototype.buildTreeRelationByRoots = function (defaultRoots) {
     if (this.network === null) return;
-
-    // 获取默认的根顶点集合
-    var defaultRoots = this.getDefaultRootVertexes();
 
     var iterator = this.network.vertexes.iterator;
     while (iterator.next()) {
@@ -186,7 +191,8 @@ function RadialTreeVertex() {
     go.LayoutVertex.call(this);
 
     this._parent = null;
-    this.children = new go.List();
+    this.children = new go.Set();
+    this.layerIndex = Infinity;
 };
 go.Diagram.inherit(RadialTreeVertex, go.LayoutVertex);
 
@@ -213,25 +219,54 @@ RadialTreeVertex.prototype.getRelativeVertexes = function () {
     return coll;
 };
 
-//RadialTreeVertex.prototype.setParent = function () {
-//    if (this.parent === null && this.sourceVertexes.count > 0) {
-//        var first = this.sourceVertexes.first();
+RadialTreeVertex.prototype.bulidTreeRelation = function () {
+    var parent = this.setParent();
+    if (parent !== null) {
+        parent.bulidTreeRelation();
+    }
 
-//        this.parent = first;
-//        first.children.add(this);
-//    }
-//};
+    var children = this.setChildren();
+    children.each(function (child) {
+        child.setChildren();
+    });
+};
+
+RadialTreeVertex.prototype.setParent = function () {
+    if (this.parent !== null) return null;
+
+    var iterator = this.sourceVertexes.iterator;
+
+    while (iterator.next()) {
+        var vertex = iterator.value;
+
+        if (vertex.layerIndex === Infinity) {
+            this.parent = vertex;
+            vertex.layerIndex = this.layerIndex - 1;
+
+            break;
+        }
+    }
+};
 
 RadialTreeVertex.prototype.setChildren = function () {
     var iterator = this.destinationVertexes.iterator;
 
     while (iterator.next()) {
         var vertex = iterator.value;
-        if (vertex !== this && vertex.parent === null) {
-            vertex.parent = this;
+
+        if (vertex.parent === null && vertex !== this) {
+            this.addChild(vertex);
+            vertex.layerIndex = this.layerIndex + 1;
         }
     }
 
+};
+
+RadialTreeVertex.prototype.addChild = function (vertex) {
+    if (!vertex || vertex === this) return;
+
+    this.children.add(vertex);
+    vertex.parent = this;
 };
 
 Object.defineProperty(RadialTreeVertex.prototype, "parent", {
@@ -239,10 +274,12 @@ Object.defineProperty(RadialTreeVertex.prototype, "parent", {
         return this._parent;
     },
     set: function (value) {
+        if (this._parent === value) return;
+
         this._parent = value;
 
-        if (value && !value.children.contains(this)) {
-            value.children.add(this);
+        if (value) {
+            value.addChild(this);
         }
     }
 });
