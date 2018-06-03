@@ -13,23 +13,23 @@ function RadialTreeLayout() {
     // 根顶点集合
     this.rootVertexes = new go.List();
     // 子树的划分模式,默认依据方向划分
-    this.splitMode = RadialTreeLayout.SplitByDirection;
+    this.treeStyle = RadialTreeLayout.Directed;
 };
 go.Diagram.inherit(RadialTreeLayout, go.Layout);
 
 /**
-* 子树的划分模式之一
+* 树类型之一
 *
-* @property {go.EnumValue} 划分模式_依据方向
+* @property {go.EnumValue} 树类型_有向树
 */
-RadialTreeLayout.SplitByDirection = new go.EnumValue(RadialTreeLayout, "SplitByDirection", 10);
+RadialTreeLayout.Directed = new go.EnumValue(RadialTreeLayout, "Directed", 10);
 
 /**
-* 子树的划分模式之一
+* 树类型之一
 *
-* @property {go.EnumValue} 划分模式_依据根顶点
+* @property {go.EnumValue} 树类型_无向树
 */
-RadialTreeLayout.SplitByRoot = new go.EnumValue(RadialTreeLayout, "SplitByRoot", 11);
+RadialTreeLayout.Undirected = new go.EnumValue(RadialTreeLayout, "Undirected", 11);
 
 /**
 * 生成布局网络
@@ -70,9 +70,9 @@ RadialTreeLayout.prototype.doLayout = function (coll) {
 * @return {go.List} 根顶点集合
 */
 RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
-    var coll = new go.Set();
+    if (this.network === null) return new go.Set();
 
-    if (this.network === null) return coll;
+    var coll = new go.Set();
 
     var iterator = this.defaultRootNodes.iterator;
     while (iterator.next()) {
@@ -97,35 +97,55 @@ RadialTreeLayout.prototype.getTrees = function (network) {
     }
 };
 
-RadialTreeLayout.prototype.buildTreeRelations = function (defaultRoots) {
-    if (this.network === null) return;
+RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
+    var network = this.network;
+    var isRelateChildrenOnly = false;
 
-    defaultRoots.each(function (root) {
-        if (root.parent !== null || root.layerIndex !== Infinity) return;
+    // 有向树时，所有目标顶点均视为中间顶点，关联父代和子代关系
+    if (this.treeStyle === RadialTreeLayout.Directed) {
+        isRelateChildrenOnly = false;
+    }
+        // 无向树时，所有目标顶点均视为根顶点，只关联子代关系
+    else {
+        isRelateChildrenOnly = true;
+    }
 
-        root.layerIndex = 0;
-        root.buildTreeRelation();
-
-    });
-
-    this.network.vertexes.each(function (vertex) {
+    // 优先为预设定顶点创建关系树
+    defaultRoots.each(function (vertex) {
         if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
 
+        // 初始化树层层级为0
         vertex.layerIndex = 0;
-        vertex.buildTreeRelation();
+        // 为目标顶点创建树形关系
+        var treeVertexes = network.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
+
+        var tree = new RadialTree();
+
     });
+
+    // 为网络中的所有顶点创建关系树
+    network.vertexes.each(function (vertex) {
+        if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
+
+        // 初始化树层层级为0
+        vertex.layerIndex = 0;
+        // 为目标顶点创建树形关系
+        var treeVertexes = network.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
+    });
+
+    var roots = this.getRootVertexes();
 };
 
-RadialTreeLayout.prototype.buildTreeRelationByRoots = function (defaultRoots) {
-    if (this.network === null) return;
+RadialTreeLayout.prototype.getRootVertexes = function () {
+    var coll = new go.List();
 
-    var iterator = this.network.vertexes.iterator;
-    while (iterator.next()) {
-        var vertex = iterator.value;
+    this.network.vertexes.each(function (vertex) {
+        if (vertex.parent === null) {
+            coll.add(vertex);
+        }
+    });
 
-        //vertex.setParent();
-        vertex.setChildren();
-    }
+    return coll;
 };
 
 //#endregion 径向树布局
@@ -164,16 +184,110 @@ RadialTreeNetwork.prototype.createVertex = function () {
     return new RadialTreeVertex();
 };
 
-RadialTreeNetwork.prototype.findVertexByKey = function (key) {
-    var iterator = this.vertexes.iterator;
+/**
+* 为顶点构建树形关系
+*
+* 目标顶点为根顶点时，只关联子代；中间顶点时，则需要关联父代和子代。
+* 目标顶点的父顶点需要关联父代和子代，目标顶点的子顶点只需要关联后代。
+*
+* @param {RadialTreeVertex} 径向树顶点
+* @param {Boolean} 是否只关联后代
+* @return {go.List} 目标顶点的树形关系所包含的顶点集合
+*/
+RadialTreeNetwork.prototype.bulidTreeRelationForVertex = function (vertex, isRelateChildrenOnly) {
+    var coll = new go.List(); // 目标顶点的树形关系所包含的顶点集合
 
-    while (iterator.next()) {
-        var vertex = iterator.value;
+    // 将目标顶点添加进集合中
+    coll.add(vertex);
 
-        if (vertex.data) {
+    // 需要关联父代关系
+    if (!isRelateChildrenOnly) {
+        // 设置父顶点
+        var parent = this.setParentForVertex(vertex);
 
+        if (parent !== null) {
+            // 为父顶点构建树形关系
+            var treeVertexes = this.bulidTreeRelationForVertex(parent, false);
+            // 将父顶点的树形关系集合添加进集合中
+            coll.addAll(treeVertexes);
         }
     }
+
+    // 设置子顶点集合
+    var children = this.setChildrenForVertex(vertex);
+
+    // 为每个子顶点设置树形关系
+    var iterator = children.iterator;
+    while (iterator.next()) {
+        var child = iterator.value;
+
+        // 为子顶点设置树形关系
+        var treeVertexes = this.bulidTreeRelationForVertex(child, true);
+        // 将子顶点的树形关系集合添加进集合中
+        coll.addAll(treeVertexes);
+    }
+
+    return coll;
+};
+
+/**
+* 为顶点设置父顶点
+*
+* @param {RadialTreeVertex} 径向树顶点
+* @return {RadialTreeVertex} 父顶点
+*/
+RadialTreeNetwork.prototype.setParentForVertex = function (vertex) {
+    if (vertex.parent !== null) return null;
+
+    // 获取顶点的来源顶点集合
+    var iterator = vertex.sourceVertexes.iterator;
+
+    while (iterator.next()) {
+        var source = iterator.value;
+
+        // 将第一个尚未建立关系的来源顶点，作为该顶点的父顶点
+        if (source.layerIndex === Infinity) {
+            vertex.parent = source;
+            source.layerIndex = this.layerIndex - 1;
+
+            return source;
+        }
+    }
+};
+
+/**
+* 为顶点设置子顶点集合
+*
+* @param {RadialTreeVertex} 径向树顶点
+* @return {go.List} 子顶点集合
+*/
+RadialTreeNetwork.prototype.setChildrenForVertex = function (vertex) {
+    var coll = new go.List();
+    var iterator = null; // 子节点来源
+
+    // 有向树时，使用目标顶点集合作为子节点来源
+    if (this.layout.treeStyle === RadialTreeLayout.Directed) {
+        iterator = vertex.destinationVertexes.iterator;
+    }
+        // 其他情况，使用关联顶点集合作为子节点来源
+    else {
+        iterator = vertex.vertexes.iterator;
+    }
+
+    while (iterator.next()) {
+        var destination = iterator.value;
+
+        // 将所有尚未建立关系、且非该顶点本身的顶点，添加进子顶点集合中
+        if (destination.parent === null && destination !== this) {
+            vertex.addChild(destination);
+            destination.layerIndex = this.layerIndex + 1;
+
+            coll.add(destination);
+        }
+    }
+
+    return coll;
+
 };
 
 //#endregion 径向树网络
@@ -219,56 +333,23 @@ RadialTreeVertex.prototype.getRelativeVertexes = function () {
     return coll;
 };
 
-RadialTreeVertex.prototype.bulidTreeRelation = function () {
-    var parent = this.setParent();
-    if (parent !== null) {
-        parent.bulidTreeRelation();
-    }
-
-    var children = this.setChildren();
-    children.each(function (child) {
-        child.setChildren();
-    });
-};
-
-RadialTreeVertex.prototype.setParent = function () {
-    if (this.parent !== null) return null;
-
-    var iterator = this.sourceVertexes.iterator;
-
-    while (iterator.next()) {
-        var vertex = iterator.value;
-
-        if (vertex.layerIndex === Infinity) {
-            this.parent = vertex;
-            vertex.layerIndex = this.layerIndex - 1;
-
-            break;
-        }
-    }
-};
-
-RadialTreeVertex.prototype.setChildren = function () {
-    var iterator = this.destinationVertexes.iterator;
-
-    while (iterator.next()) {
-        var vertex = iterator.value;
-
-        if (vertex.parent === null && vertex !== this) {
-            this.addChild(vertex);
-            vertex.layerIndex = this.layerIndex + 1;
-        }
-    }
-
-};
-
+/**
+* 添加子顶点
+*
+* @param {RadialTreeVertex} 目标顶点
+*/
 RadialTreeVertex.prototype.addChild = function (vertex) {
     if (!vertex || vertex === this) return;
 
+    // 将目标顶点添加子顶点集合中
     this.children.add(vertex);
+    // 将当前顶点作为目标顶点的父顶点
     vertex.parent = this;
 };
 
+/**
+* @property {RadialTreeVertex} 父顶点
+*/
 Object.defineProperty(RadialTreeVertex.prototype, "parent", {
     get: function () {
         return this._parent;
@@ -278,6 +359,7 @@ Object.defineProperty(RadialTreeVertex.prototype, "parent", {
 
         this._parent = value;
 
+        // 设置父顶点时，自动为父顶点添加子顶点
         if (value) {
             value.addChild(this);
         }
@@ -315,6 +397,35 @@ function RadialTree() {
     this.root = null;
     // 顶点集合
     this.vertexes = new go.List();
+
+    this.layers = new go.Map("number", RadialTree);
+};
+
+RadialTree.prototype.buildTreeRelation = function (vertex) {
+    var index = vertex.layerIndex + 1;
+    var iterator = vertex.children.iterator;
+
+    var layer = this.getLayer(index);
+    if (layer === null) {
+        layer = new RadialTreeLayer(index);
+    }
+
+    while (iterator.next()) {
+        var child = iterator.value;
+
+        this.addVertexToLayer(child, layer);
+        this.buildTreeRelation(child);
+    }
+};
+
+RadialTree.prototype.addVertexToLayer = function (vertex, layer) {
+    vertex.layer = layer;
+    vertex.layerIndex = layerIndex;
+    layer.addVertex(vertex);
+};
+
+RadialTree.prototype.getLayer = function (index) {
+    return this.layers.get(index);
 };
 
 //#endregion 径向树
@@ -327,8 +438,13 @@ function RadialTree() {
 /**
 * 径向树层的构造函数
 */
-function RadialTreeLayer() {
+function RadialTreeLayer(index) {
+    this.index = index;
+    this.vertexes = new go.List();
+};
 
+RadialTreeLayer.prototype.addVertex = function (vertex) {
+    this.vertexes.add(vertex);
 };
 
 //#endregion 径向树层
