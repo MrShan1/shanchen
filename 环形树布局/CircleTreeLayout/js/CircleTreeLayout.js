@@ -114,12 +114,7 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     defaultRoots.each(function (vertex) {
         if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
 
-        // 初始化树层层级为0
-        vertex.layerIndex = 0;
-        // 为目标顶点创建树形关系
-        var treeVertexes = network.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
-
-        var tree = new RadialTree();
+        network.buildTreeForVertex(vertex, isRelateChildrenOnly);
 
     });
 
@@ -127,25 +122,10 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     network.vertexes.each(function (vertex) {
         if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
 
-        // 初始化树层层级为0
-        vertex.layerIndex = 0;
-        // 为目标顶点创建树形关系
-        var treeVertexes = network.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
+        network.buildTreeForVertex(vertex, isRelateChildrenOnly);
     });
 
     var roots = this.getRootVertexes();
-};
-
-RadialTreeLayout.prototype.getRootVertexes = function () {
-    var coll = new go.List();
-
-    this.network.vertexes.each(function (vertex) {
-        if (vertex.parent === null) {
-            coll.add(vertex);
-        }
-    });
-
-    return coll;
 };
 
 //#endregion 径向树布局
@@ -182,6 +162,20 @@ RadialTreeNetwork.prototype.createEdge = function () {
 */
 RadialTreeNetwork.prototype.createVertex = function () {
     return new RadialTreeVertex();
+};
+
+RadialTreeNetwork.prototype.buildTreeForVertex = function (vertex, isRelateChildrenOnly) {
+    // 初始化树层层级为0
+    vertex.layerIndex = 0;
+
+    // 为目标顶点创建树形关系
+    var treeVertexes = network.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
+
+    // 创建径向树
+    var tree = new RadialTree(treeVertexes);
+
+    //
+
 };
 
 /**
@@ -392,11 +386,11 @@ go.Diagram.inherit(RadialTreeEdge, go.LayoutEdge);
 /**
 * 径向树的构造函数
 */
-function RadialTree() {
+function RadialTree(vertexes) {
     // 根顶点
     this.root = null;
     // 顶点集合
-    this.vertexes = new go.List();
+    this.vertexes = vertexes;
 
     this.layers = new go.Map("number", RadialTree);
 };
@@ -416,6 +410,10 @@ RadialTree.prototype.buildTreeRelation = function (vertex) {
         this.addVertexToLayer(child, layer);
         this.buildTreeRelation(child);
     }
+};
+
+RadialTree.prototype.arrangeLayers = function () {
+    var rootVertex = null;
 };
 
 RadialTree.prototype.addVertexToLayer = function (vertex, layer) {
