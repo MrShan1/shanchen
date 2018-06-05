@@ -87,16 +87,13 @@ RadialTreeLayout.prototype.getDefaultRootVertexes = function () {
     return coll;
 };
 
-RadialTreeLayout.prototype.getTrees = function (network) {
-    var vertexes = new go.List().addAll(network.vertexes);
-
-    while (vertexes.count > 0) {
-        var first = vertexes.first();
-        var tree = new RadialTree();
-
-    }
-};
-
+/**
+* 创建布局网络的所有子树
+*
+* 根据默认的根顶点集合，将所有顶点分配到对应的子树中
+*
+* @param {go.List} defaultRoots 根顶点集合
+*/
 RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     var network = this.network;
     var isRelateChildrenOnly = false;
@@ -114,6 +111,7 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     defaultRoots.each(function (vertex) {
         if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
 
+        // 为顶点创建径向树
         network.buildTreeForVertex(vertex, isRelateChildrenOnly);
 
     });
@@ -122,10 +120,9 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     network.vertexes.each(function (vertex) {
         if (vertex.parent !== null || vertex.layerIndex !== Infinity) return;
 
+        // 为顶点创建径向树
         network.buildTreeForVertex(vertex, isRelateChildrenOnly);
     });
-
-    var roots = this.getRootVertexes();
 };
 
 //#endregion 径向树布局
@@ -141,6 +138,9 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
 */
 function RadialTreeNetwork() {
     go.LayoutNetwork.call(this);
+
+    // 径向树集合
+    this.trees = new go.List();
 };
 go.Diagram.inherit(RadialTreeNetwork, go.LayoutNetwork);
 
@@ -164,8 +164,14 @@ RadialTreeNetwork.prototype.createVertex = function () {
     return new RadialTreeVertex();
 };
 
+/**
+* 为顶点创建径向树
+*
+* @param {RadialTreeVertex} vertex 径向树顶点
+* @param {Boolean} isRelateChildrenOnly 是否只关联后代
+*/
 RadialTreeNetwork.prototype.buildTreeForVertex = function (vertex, isRelateChildrenOnly) {
-    // 初始化树层层级为0
+    // 初始化树层层级为0（临时用）
     vertex.layerIndex = 0;
 
     // 为目标顶点创建树形关系
@@ -174,8 +180,8 @@ RadialTreeNetwork.prototype.buildTreeForVertex = function (vertex, isRelateChild
     // 创建径向树
     var tree = new RadialTree(treeVertexes);
 
-    //
-
+    // 将径向树添加进子树集合中
+    this.trees.add(tree);
 };
 
 /**
@@ -184,8 +190,8 @@ RadialTreeNetwork.prototype.buildTreeForVertex = function (vertex, isRelateChild
 * 目标顶点为根顶点时，只关联子代；中间顶点时，则需要关联父代和子代。
 * 目标顶点的父顶点需要关联父代和子代，目标顶点的子顶点只需要关联后代。
 *
-* @param {RadialTreeVertex} 径向树顶点
-* @param {Boolean} 是否只关联后代
+* @param {RadialTreeVertex} vertex 径向树顶点
+* @param {Boolean} isRelateChildrenOnly 是否只关联后代
 * @return {go.List} 目标顶点的树形关系所包含的顶点集合
 */
 RadialTreeNetwork.prototype.bulidTreeRelationForVertex = function (vertex, isRelateChildrenOnly) {
@@ -227,7 +233,7 @@ RadialTreeNetwork.prototype.bulidTreeRelationForVertex = function (vertex, isRel
 /**
 * 为顶点设置父顶点
 *
-* @param {RadialTreeVertex} 径向树顶点
+* @param {RadialTreeVertex} vertex 径向树顶点
 * @return {RadialTreeVertex} 父顶点
 */
 RadialTreeNetwork.prototype.setParentForVertex = function (vertex) {
@@ -252,7 +258,7 @@ RadialTreeNetwork.prototype.setParentForVertex = function (vertex) {
 /**
 * 为顶点设置子顶点集合
 *
-* @param {RadialTreeVertex} 径向树顶点
+* @param {RadialTreeVertex} vertex 径向树顶点
 * @return {go.List} 子顶点集合
 */
 RadialTreeNetwork.prototype.setChildrenForVertex = function (vertex) {
@@ -330,7 +336,7 @@ RadialTreeVertex.prototype.getRelativeVertexes = function () {
 /**
 * 添加子顶点
 *
-* @param {RadialTreeVertex} 目标顶点
+* @param {RadialTreeVertex} vertex 目标顶点
 */
 RadialTreeVertex.prototype.addChild = function (vertex) {
     if (!vertex || vertex === this) return;
@@ -387,43 +393,70 @@ go.Diagram.inherit(RadialTreeEdge, go.LayoutEdge);
 * 径向树的构造函数
 */
 function RadialTree(vertexes) {
-    // 根顶点
-    this.root = null;
     // 顶点集合
     this.vertexes = vertexes;
-
-    this.layers = new go.Map("number", RadialTree);
+    // 根顶点
+    this.root = this.getRootVertex();
+    // 树层集合
+    this.layers = new go.Map();
+    // 从根顶点开始，分配每个顶点至各个树层
+    this.splitVertexIntoLayer(this.root, 0);
 };
 
-RadialTree.prototype.buildTreeRelation = function (vertex) {
-    var index = vertex.layerIndex + 1;
-    var iterator = vertex.children.iterator;
-
-    var layer = this.getLayer(index);
+/**
+* 为顶点分配径向树层
+*
+* 将树中所有的顶点分配到对应的树层中
+*
+* @param {RadialTreeVertex} vertex 径向树顶点
+* @param {Number} layerIndex 树层索引
+*/
+RadialTree.prototype.splitVertexIntoLayer = function (vertex, layerIndex) {
+    var layer = this.getLayer(layerIndex);
     if (layer === null) {
-        layer = new RadialTreeLayer(index);
+        layer = new RadialTreeLayer(layerIndex);
+        this.layers.add(layerIndex, layer);
     }
 
+    layer.add(vertex);
+
+    var iterator = vertex.children.iterator;
     while (iterator.next()) {
         var child = iterator.value;
 
-        this.addVertexToLayer(child, layer);
-        this.buildTreeRelation(child);
+        this.splitVertexIntoLayer(child, layerIndex + 1);
     }
 };
 
-RadialTree.prototype.arrangeLayers = function () {
+/**
+* 获取索引对应的树层
+*
+* @param {Number} layerIndex 树层索引
+* @return {RadialTreeLayer} 径向树层
+*/
+RadialTree.prototype.getLayer = function (layerIndex) {
+    return this.layers.get(layerIndex);
+};
+
+/**
+* 获取树的根顶点
+*
+* @return {RadialTreeLayer} 径向树的根顶点
+*/
+RadialTree.prototype.getRootVertex = function () {
     var rootVertex = null;
-};
+    var iterator = this.vertexes.iterator;
 
-RadialTree.prototype.addVertexToLayer = function (vertex, layer) {
-    vertex.layer = layer;
-    vertex.layerIndex = layerIndex;
-    layer.addVertex(vertex);
-};
+    while (iterator.next()) {
+        var vertex = iterator.value;
 
-RadialTree.prototype.getLayer = function (index) {
-    return this.layers.get(index);
+        if (vertex.parent === null) {
+            rootVertex = vertex;
+            break;
+        }
+    }
+
+    return rootVertex;
 };
 
 //#endregion 径向树
@@ -437,12 +470,20 @@ RadialTree.prototype.getLayer = function (index) {
 * 径向树层的构造函数
 */
 function RadialTreeLayer(index) {
+    // 树层索引
     this.index = index;
+    // 树层包含的顶点集合
     this.vertexes = new go.List();
 };
 
+/**
+* 将目标顶点添加到树层中
+*
+* @param {RadialTreeVertex} vertex 径向树顶点
+*/
 RadialTreeLayer.prototype.addVertex = function (vertex) {
     this.vertexes.add(vertex);
+    vertex.layerIndex = this.index;
 };
 
 //#endregion 径向树层
