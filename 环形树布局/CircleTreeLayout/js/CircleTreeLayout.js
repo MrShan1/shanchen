@@ -304,9 +304,14 @@ RadialTreeNetwork.prototype.setChildrenForVertex = function (vertex) {
 function RadialTreeVertex() {
     go.LayoutVertex.call(this);
 
+    // 父顶点
     this._parent = null;
+    // 子顶点集合
     this.children = new go.Set();
+    // 所属树层的索引
     this.layerIndex = Infinity;
+    // 自身所占区域的外接圆半径
+    this.radius = NaN;
 };
 go.Diagram.inherit(RadialTreeVertex, go.LayoutVertex);
 
@@ -404,6 +409,16 @@ function RadialTree(vertexes) {
 };
 
 /**
+* @property {Number} 层级之间的间距
+*/
+RadialTree.prototype.layerDistance = 10;
+
+/**
+* @property {Number} 同层顶点之间的间距
+*/
+RadialTree.prototype.vertexDistance = 5;
+
+/**
 * 为顶点分配径向树层
 *
 * 将树中所有的顶点分配到对应的树层中
@@ -418,12 +433,14 @@ RadialTree.prototype.splitVertexIntoLayer = function (vertex, layerIndex) {
         this.layers.add(layerIndex, layer);
     }
 
+    // 为目标顶点分配径向树层
     layer.add(vertex);
 
     var iterator = vertex.children.iterator;
     while (iterator.next()) {
         var child = iterator.value;
 
+        // 为子顶点分配径向树层
         this.splitVertexIntoLayer(child, layerIndex + 1);
     }
 };
@@ -450,6 +467,7 @@ RadialTree.prototype.getRootVertex = function () {
     while (iterator.next()) {
         var vertex = iterator.value;
 
+        // 第一个无父顶点的顶点，即为根顶点
         if (vertex.parent === null) {
             rootVertex = vertex;
             break;
@@ -474,6 +492,8 @@ function RadialTreeLayer(index) {
     this.index = index;
     // 树层包含的顶点集合
     this.vertexes = new go.List();
+    // 树层半径
+    this.radius = NaN;
 };
 
 /**
