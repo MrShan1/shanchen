@@ -60,14 +60,12 @@ function createDiagram() {
 
 function createLayout() {
     var layout =
-        $(go.ForceDirectedLayout,
+        $(RadialTreeLayout,
             {
                 //isInitial: true,
                 //isOngoing: false
             }
         );
-
-    layout.maxIteration = 200;
 
     return layout;
 };
