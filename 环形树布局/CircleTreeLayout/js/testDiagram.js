@@ -49,10 +49,20 @@ function createDiagram() {
             )
         );
 
+    //diagram.linkTemplate =
+    //    $(go.Link,
+    //        {
+    //            //isLayoutPositioned: false
+    //        },
+    //        $(go.Shape)
+    //    );
+
     diagram.linkTemplate =
         $(go.Link,
             {
                 //isLayoutPositioned: false
+                //routing: go.Link.Orthogonal,
+                //curve: go.Link.Bezier
             },
             $(go.Shape)
         );
@@ -63,7 +73,7 @@ function createLayout() {
         $(RadialTreeLayout,
             {
                 //isInitial: true,
-                //isOngoing: false
+                isOngoing: false
             }
         );
 
@@ -74,7 +84,7 @@ function loadData() {
     var model = diagram.model;
 
     generateNodes(model, 100, 100);
-    generateLinks(model, 5, 5);
+    generateLinks(model, 1, 5);
 
     diagram.layoutDiagram(true);
 };

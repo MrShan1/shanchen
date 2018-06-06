@@ -374,7 +374,7 @@ go.Diagram.inherit(RadialTreeVertex, go.LayoutVertex);
 /**
 * @property {Number} 同层顶点之间的间距
 */
-RadialTreeVertex.prototype.vertexSpacing = 10;
+RadialTreeVertex.prototype.vertexSpacing = 20;
 
 /**
 * 获取相关顶点集合
@@ -546,7 +546,7 @@ function RadialTree(vertexes) {
 /**
 * @property {Number} 层级之间的间距
 */
-RadialTree.prototype.layerSpacing = 10;
+RadialTree.prototype.layerSpacing = 50;
 
 /**
 * @property {Number} 树的扫描角度
