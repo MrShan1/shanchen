@@ -1,4 +1,5 @@
 ﻿/// <reference path="go-debug-1.8.7.js" />
+/// <reference path="testDiagram.js" />
 
 var $ = go.GraphObject.make;
 var diagram = null;
@@ -67,7 +68,7 @@ function createDiagram() {
                 //routing: go.Link.Orthogonal,
 
                 routing: go.Link.Normal,
-                curve: go.Link.Bezier,
+                //curve: go.Link.Bezier,
             },
             $(go.Shape),
             $(go.Shape,
@@ -86,7 +87,8 @@ function createLayout() {
         $(RadialTreeLayout,
             {
                 //isInitial: true,
-                //isOngoing: false
+                //isOngoing: false,
+                treeStyle: RadialTreeLayout.Undirected,
             }
         );
 

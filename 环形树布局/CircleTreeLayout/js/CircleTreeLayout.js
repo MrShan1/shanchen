@@ -560,7 +560,7 @@ RadialTree.prototype.layerSpacing = 100;
 /**
 * @property {Number} 层级之间的增量间距
 */
-RadialTree.prototype.incrementLayerSpacing = 2;
+RadialTree.prototype.incrementLayerSpacing = 5;
 
 /**
 * @property {Number} 同层顶点之间的最小间距
@@ -755,15 +755,26 @@ RadialTree.prototype.computeLayerRadius = function (layerIndex) {
 */
 RadialTree.prototype.isLayerRadiusTooSmall = function (layer, radius) {
     var isLayerRadiusTooSmall = false;
-    var iterator = layer.vertexes.iterator;
+    var count = layer.vertexes.count;
     var layerArcLength = radius * this.sweepAngle * Math.PI / 180;
 
-    while (iterator.next()) {
-        var vertex = iterator.value;
+    for (var i = 0; i < count; i++) {
+        // 获取当前顶点
+        var vertex = layer.vertexes.get(i);
         // 该顶点的真实弧长
         var arcLength = layerArcLength * vertex.arcLength / layer.vertexesArcLength;
         // 该顶点所对应的顶点间距
-        var vertexSpacing = arcLength - vertex.diameter;
+        var spacing = arcLength - vertex.diameter;
+
+        // 获取下一个顶点，若当前顶点是最后一个顶点，则使用第一个顶点
+        var nextVertex = i < count - 1 ? layer.vertexes.get(i + 1) : layer.vertexes.get(0);
+        // 下一个顶点的真实弧长
+        var nextArcLength = layerArcLength * nextVertex.arcLength / layer.vertexesArcLength;
+        // 下一个顶点所对应的顶点间距
+        var nextSpacing = arcLength - nextVertex.diameter;
+
+        // 获取当前顶点与相邻的下一个顶点的间距
+        var vertexSpacing = spacing / 2 + nextSpacing / 2;
 
         // 顶点间距小于最小值时，则视为层半径过小
         if (vertexSpacing < this.minVertexSpacing) {
@@ -784,8 +795,22 @@ RadialTree.prototype.isLayerRadiusTooSmall = function (layer, radius) {
 RadialTree.prototype.locateVertexChildren = function (vertex) {
     var startAngle = vertex.startAngle;
     var sweepAngle = vertex.sweepAngle;
+    var childrenArcLength = vertex.childrenArcLength;
+    var preAngle = 0; // 前置保留角度
     var iterator = vertex.children.iterator;
-    var preAngle = 0;
+    var childLayer = this.getLayer(vertex.layer.index + 1);
+
+    if (childLayer === null) return;
+
+    var childRadius = childLayer.radius;
+    var arcLength = childRadius * sweepAngle * Math.PI / 180;
+    var childrenSweepAngle = sweepAngle;
+
+    // 扫描角度稍大时,会导致子顶点排列过于松散,设置前置保留角度,收紧子顶点间距
+    if (childrenArcLength < arcLength) {
+        childrenSweepAngle = sweepAngle * childrenArcLength / arcLength;
+        preAngle = (sweepAngle - childrenSweepAngle) / 2;
+    }
 
     while (iterator.next()) {
         var child = iterator.value;
@@ -793,20 +818,20 @@ RadialTree.prototype.locateVertexChildren = function (vertex) {
         // 设置起始角度
         child.startAngle = startAngle + preAngle;
         // 设置扫描角度
-        child.sweepAngle = sweepAngle * child.arcLength / vertex.childrenArcLength;
+        child.sweepAngle = childrenSweepAngle * child.arcLength / childrenArcLength;
 
         // 获取中心点角度
         var centerAngle = child.startAngle + child.sweepAngle / 2;
         // 获取所在层半径
-        var radius = child.layer.radius;
+        var radius = childRadius;
         // 计算顶点的中心点位置
         child.centerX = radius * Math.cos(centerAngle * Math.PI / 180);
         child.centerY = radius * Math.sin(centerAngle * Math.PI / 180);
 
+        preAngle += child.sweepAngle;
+
         // 向下递归，计算子顶点位置
         this.locateVertexChildren(child);
-
-        preAngle += child.sweepAngle;
     }
 };
 
