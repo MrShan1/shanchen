@@ -145,7 +145,7 @@ go.Diagram.inherit(RadialTreeNetwork, go.LayoutNetwork);
 /**
 * @property {Number} 树之间的间距
 */
-RadialTreeNetwork.prototype.treeSpacing = 10;
+RadialTreeNetwork.prototype.treeSpacing = 100;
 
 /**
 * 生成网络的边线
@@ -320,21 +320,30 @@ RadialTreeNetwork.prototype.addTree = function (tree) {
 RadialTreeNetwork.prototype.arrangeTrees = function () {
     var trees = this.trees;
     var treeCount = trees.count;
-    var index = 0;
-    var offsetX = 0;
-    var offsetY = 0;
+    var firstX = trees.first().bounds.center.x;
+    var firstY = trees.first().bounds.center.y;
+    var index = 1;
+    var distanceX = 0;
+    var distanceY = 0;
 
-    while (index < treeCount - 1) {
+    while (index < treeCount) {
+        var beforeTree = trees.get(index - 1);
         var tree = trees.get(index);
-        var nextTree = trees.get(index + 1);
 
-        // 树的X轴中心位置向右偏移
-        offsetX += tree.bounds.width / 2 + this.treeSpacing + nextTree.bounds.width / 2;
-        // 树的Y轴中心位置不变
-        offsetY = offsetY;
+        // 计算当前树中心与第一个树中心的x轴距离
+        distanceX += beforeTree.bounds.width / 2 + this.treeSpacing + tree.bounds.width / 2;
+        // 计算当前树中心与第一个树中心的y轴距离
+        distanceY = distanceY;
+
+        // 计算当前树相对于起始位置的x轴偏移量
+        var offsetX = firstX + distanceX - tree.bounds.center.x;
+        // 计算当前树相对于起始位置的y轴偏移量
+        var offsetY = firstY + distanceY - tree.bounds.center.y;
 
         // 移动树中所有顶点位置
-        nextTree.moveAllVertexes(offsetX, offsetY);
+        tree.moveAllVertexes(offsetX, offsetY);
+
+        index++;
     }
 };
 
@@ -546,7 +555,17 @@ function RadialTree(vertexes) {
 /**
 * @property {Number} 层级之间的间距
 */
-RadialTree.prototype.layerSpacing = 50;
+RadialTree.prototype.layerSpacing = 100;
+
+/**
+* @property {Number} 层级之间的增量间距
+*/
+RadialTree.prototype.incrementLayerSpacing = 2;
+
+/**
+* @property {Number} 同层顶点之间的最小间距
+*/
+RadialTree.prototype.minVertexSpacing = 20;
 
 /**
 * @property {Number} 树的扫描角度
@@ -704,22 +723,57 @@ RadialTree.prototype.computeLayerRadius = function (layerIndex) {
 
     // 获取第0层的半径
     if (layerIndex === 0) {
-        // 根据根顶点半径计算树层半径1
-        var layerRadius1 = this.layerSpacing + layer.thickness / 2;
-        // 根据树层弧长计算树层半径2
-        var layerRadius2 = layer.vertexesArcLength / (this.sweepAngle * Math.PI / 180);
+        // 根据根顶点半径计算树层半径
+        var radius = layer.thickness / 2;
 
-        // 取较大值作为树层半径
-        layer.radius = layerRadius1 > layerRadius2 ? layerRadius1 : layerRadius2;
+        layer.radius = radius;
     }
         // 获取其他层的半径
     else {
         // 获取相邻的内层树层
-        var innerlayer = this.getLayer(layerIndex - 1);
+        var innerLayer = this.getLayer(layerIndex - 1);
 
-        // 计算树层的半径
-        layer.radius = innerlayer.radius + this.layerSpacing + layer.thickness / 2;
+        // 计算树层的初始(最小)半径
+        var radius = innerLayer.radius + innerLayer.thickness / 2 + this.layerSpacing + layer.thickness / 2;
+
+        // 计算树层的初始(最小)半径
+        while (this.isLayerRadiusTooSmall(layer, radius)) {
+            // 树层半径增大
+            radius += this.incrementLayerSpacing;
+        }
+
+        layer.radius = radius;
     }
+};
+
+/**
+* 测试树层半径是否过小
+*
+* @param {RadialTreeLayer} layer 树层
+* @param {Number} radius 树层半径
+* @return {Boolean} 树层半径过小标识
+*/
+RadialTree.prototype.isLayerRadiusTooSmall = function (layer, radius) {
+    var isLayerRadiusTooSmall = false;
+    var iterator = layer.vertexes.iterator;
+    var layerArcLength = radius * this.sweepAngle * Math.PI / 180;
+
+    while (iterator.next()) {
+        var vertex = iterator.value;
+        // 该顶点的真实弧长
+        var arcLength = layerArcLength * vertex.arcLength / layer.vertexesArcLength;
+        // 该顶点所对应的顶点间距
+        var vertexSpacing = arcLength - vertex.diameter;
+
+        // 顶点间距小于最小值时，则视为层半径过小
+        if (vertexSpacing < this.minVertexSpacing) {
+            isLayerRadiusTooSmall = true;
+
+            break;
+        }
+    }
+
+    return isLayerRadiusTooSmall;
 };
 
 /**
