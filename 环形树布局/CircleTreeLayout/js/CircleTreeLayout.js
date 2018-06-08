@@ -575,7 +575,7 @@ RadialTree.prototype.sweepAngle = 360;
 /**
 * @property {Number} 树的起始角度
 */
-RadialTree.prototype.startAngle = 0;
+RadialTree.prototype.startAngle = -180;
 
 /**
 * 为顶点分配径向树层
