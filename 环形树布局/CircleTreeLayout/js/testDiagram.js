@@ -18,7 +18,8 @@ function createDiagram() {
             {
                 initialAutoScale: go.Diagram.Uniform,
                 contentAlignment: go.Spot.Center,
-                "undoManager.isEnabled": false
+                "undoManager.isEnabled": false,
+                "animationManager.isEnabled": true,
             }
         );
 
@@ -30,8 +31,8 @@ function createDiagram() {
         $(go.Node, "Auto",
             {
                 //isLayoutPositioned: false,
-                width: 30,
-                height: 30,
+                width: 50,
+                height: 50,
                 locationSpot: go.Spot.Center,
             },
             //new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
@@ -41,10 +42,10 @@ function createDiagram() {
             //    return new go.Rect(p.x, p.y, d.bounds.width, d.bounds.height);
             //}),
             new go.Binding("width", "importance", function (data, obj) {
-                return 30 * data;
+                return obj.width * data;
             }),
             new go.Binding("height", "importance", function (data, obj) {
-                return 30 * data;
+                return obj.height * data;
             }),
             $(go.Shape, "Circle",
                 new go.Binding("fill", "color")
@@ -88,7 +89,7 @@ function createLayout() {
             {
                 //isInitial: true,
                 //isOngoing: false,
-                treeStyle: RadialTreeLayout.Undirected,
+                isDirected: false,
             }
         );
 
@@ -126,7 +127,7 @@ function generateNodes(model, min, max) {
     var numNodes = Math.floor(Math.random() * (max - min + 1)) + min;
     for (var i = 0; i < numNodes; i++) {
         var d = {
-            key: i,
+            key: i.toString(),
             color: go.Brush.randomColor()  // the node's color
         };
         //!!!???@@@ this needs to be customized to account for your chosen Node template

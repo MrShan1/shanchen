@@ -7,15 +7,36 @@
     <script src="js/CircleTreeLayout.js"></script>
     <script src="js/testDiagram.js"></script>
     <script>
-        function relayout() {
-            diagram.layout.defaultRootNodes.clear();
-            diagram.layout.defaultRootNodes.addAll(diagram.selection);
+        function relayout(value) {
+            var list = new go.List();
+            diagram.selection.each(function (part) {
+                part instanceof go.Node && list.add(part);
+            });
+
+            diagram.layout.defaultRootNodes.addAll(list);
+
+            if (value === "Directed") {
+                diagram.layout.isDirected = true;
+            }
+            else if (value === "Undirected") {
+                diagram.layout.isDirected = false;
+            }
+            else if (value === "Defalut") {
+                diagram.layout.treeLeafLayer = RadialTreeLayout.DefaultLayer;
+            }
+            else if (value === "Outermost") {
+                diagram.layout.treeLeafLayer = RadialTreeLayout.OutermostLayer;
+            }
+
             diagram.layoutDiagram(true);
         };
     </script>
 </head>
 <body onload="init()">
     <div id="diagramDiv" style="background-color: white; border: solid 1px blue; width: 100%; height: 800px;"></div>
-    <button style="border: solid 1px blue; width: 80px; height: 30px" onclick="relayout()">重布局</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Directed')">有向树</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Undirected')">无向树</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Defalut')">默认层</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Outermost')">最外层</button>
 </body>
 </html>
