@@ -16,6 +16,8 @@ function RadialTreeLayout() {
     this._isDirected = true;
     // 叶顶点所在层
     this._treeLeafLayer = RadialTreeLayout.DefaultLayer;
+    // 叶顶点所在层
+    this._vertexSpacing = RadialTreeLayout.Compact;
     // 径向树集合
     this.trees = new go.List();
 };
@@ -34,6 +36,34 @@ RadialTreeLayout.DefaultLayer = new go.EnumValue(RadialTreeLayout, "DefaultLayer
 * @property {go.EnumValue} 叶顶点所在层_最外层
 */
 RadialTreeLayout.OutermostLayer = new go.EnumValue(RadialTreeLayout, "OutermostLayer", 11);
+
+/**
+* 同层顶点间距之一
+*
+* @property {go.EnumValue} 同层顶点间距_紧密
+*/
+RadialTreeLayout.Compact = new go.EnumValue(RadialTreeLayout, "Compact", 20);
+
+/**
+* 同层顶点间距之一
+*
+* @property {go.EnumValue} 同层顶点间距_松散
+*/
+RadialTreeLayout.Loose = new go.EnumValue(RadialTreeLayout, "Loose", 21);
+
+/**
+* 同层顶点间距之一
+*
+* @property {go.EnumValue} 同层顶点间距_仅叶顶点紧密
+*/
+RadialTreeLayout.TreeLeafCompact = new go.EnumValue(RadialTreeLayout, "TreeLeafCompact", 22);
+
+/**
+* 同层顶点间距之一
+*
+* @property {go.EnumValue} 同层顶点间距_仅根顶点的子顶点松散
+*/
+RadialTreeLayout.RootChildrenLoose = new go.EnumValue(RadialTreeLayout, "RootChildrenLoose", 33);
 
 /**
 * @property {Number} 层级之间的增量间距
@@ -357,12 +387,12 @@ Object.defineProperty(RadialTreeLayout.prototype, "isDirected", {
     },
     set: function (value) {
         // 值未变化，则直接跳过
-        if (this._isDirected === value) return;
+        //if (this._isDirected === value) return;
 
         this._isDirected = value;
 
         // 触发重新布局
-        //this.invalidateLayout();
+        this.invalidateLayout();
     }
 });
 
@@ -375,12 +405,30 @@ Object.defineProperty(RadialTreeLayout.prototype, "treeLeafLayer", {
     },
     set: function (value) {
         // 值未变化，则直接跳过
-        if (this._treeLeafLayer === value) return;
+        //if (this._treeLeafLayer === value) return;
 
         this._treeLeafLayer = value;
 
         // 触发重新布局
-        //this.invalidateLayout();
+        this.invalidateLayout();
+    }
+});
+
+/**
+* @property {go.EnumValue} 同层顶点间距
+*/
+Object.defineProperty(RadialTreeLayout.prototype, "vertexSpacing", {
+    get: function () {
+        return this._vertexSpacing;
+    },
+    set: function (value) {
+        // 值未变化，则直接跳过
+        //if (this._vertexSpacing === value) return;
+
+        this._vertexSpacing = value;
+
+        // 触发重新布局
+        this.invalidateLayout();
     }
 });
 
@@ -739,26 +787,30 @@ RadialTree.prototype.locateVertexChildren = function (vertex) {
     var childrenArcLength = vertex.childrenArcLength; // 子顶点的弧长总和
     var preAngle = 0; // 前置保留角度
     var childrenSweepAngle = sweepAngle; // 子顶点的扫描角度总和
+    var vertexSpacing = this.layout.vertexSpacing;
 
-    // 一般情况下,所有子顶点均在下一层
-    var nextLayer = this.getLayer(vertex.layer.index + 1);
+    // 顶点间距非宽松时，需要计算前置保留角度
+    if (vertexSpacing !== RadialTreeLayout.Loose) {
+        // 一般情况下,所有子顶点均在下一层
+        var nextLayer = this.getLayer(vertex.layer.index + 1);
 
-    if (nextLayer === null) return;
+        if (nextLayer === null) return;
 
-    // 获取下一层的半径
-    var nextLayerRadius = nextLayer.radius;
+        // 获取下一层的半径
+        var nextLayerRadius = nextLayer.radius;
 
-    // 使用父顶点的扫描角度与次层的半径，计算出扫描弧长
-    var sweepArcLength = nextLayerRadius * sweepAngle * Math.PI / 180;
+        // 使用父顶点的扫描角度与次层的半径，计算出扫描弧长
+        var sweepArcLength = nextLayerRadius * sweepAngle * Math.PI / 180;
 
-    // 子顶点的弧长总和小于扫描弧长时,则视为扫描角度过大
-    // 扫描角度过大时,直接给子顶点分配角度，会使子顶点排列过于松散
-    // 设置前置保留角度,收紧子顶点之间的距离
-    if (childrenArcLength < sweepArcLength) {
-        // 获取真正的子顶点扫描角度
-        childrenSweepAngle = sweepAngle * childrenArcLength / sweepArcLength;
-        // 设置前置保留角度
-        preAngle = (sweepAngle - childrenSweepAngle) / 2;
+        // 子顶点的弧长总和小于扫描弧长时,则视为扫描角度过大
+        // 扫描角度过大时,直接给子顶点分配角度，会使子顶点排列过于松散
+        // 设置前置保留角度,收紧子顶点之间的距离
+        if (childrenArcLength < sweepArcLength) {
+            // 获取真正的子顶点扫描角度
+            childrenSweepAngle = sweepAngle * childrenArcLength / sweepArcLength;
+            // 设置前置保留角度
+            preAngle = (sweepAngle - childrenSweepAngle) / 2;
+        }
     }
 
     // 计算每个子顶点的位置
@@ -766,21 +818,31 @@ RadialTree.prototype.locateVertexChildren = function (vertex) {
     while (iterator.next()) {
         var child = iterator.value;
 
-        // 设置起始角度
-        child.startAngle = startAngle + preAngle;
-        // 设置扫描角度
-        child.sweepAngle = childrenSweepAngle * child.arcLength / childrenArcLength;
+        if (vertexSpacing === RadialTreeLayout.Compact
+            || (vertexSpacing === RadialTreeLayout.RootChildrenLoose && child.layer.index > 1)
+            || (vertexSpacing === RadialTreeLayout.TreeLeafCompact && child.children.count === 0)) {
+            // 设置起始角度
+            child.startAngle = startAngle + preAngle;
+            // 设置扫描角度
+            child.sweepAngle = childrenSweepAngle * child.arcLength / childrenArcLength;
+        }
+        else {
+            // 设置起始角度
+            child.startAngle = startAngle;
+            // 设置扫描角度
+            child.sweepAngle = sweepAngle * child.arcLength / childrenArcLength;
+        }
 
         // 获取中心点角度
         var centerAngle = child.startAngle + child.sweepAngle / 2;
         // 获取子顶点所在层半径(子顶点不一定真的在下一层,需要重新获取)
-        var radius = this.getLayer(child.layer.index).radius;
+        var radius = child.layer.radius;
 
         // 计算顶点的中心点位置
         child.centerX = radius * Math.cos(centerAngle * Math.PI / 180);
         child.centerY = radius * Math.sin(centerAngle * Math.PI / 180);
 
-        preAngle += child.sweepAngle;
+        startAngle += child.sweepAngle;
 
         // 向下递归，计算子顶点位置
         this.locateVertexChildren(child);

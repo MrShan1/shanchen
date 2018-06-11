@@ -27,6 +27,18 @@
             else if (value === "Outermost") {
                 diagram.layout.treeLeafLayer = RadialTreeLayout.OutermostLayer;
             }
+            else if (value === "Compact") {
+                diagram.layout.vertexSpacing = RadialTreeLayout.Compact;
+            }
+            else if (value === "Loose") {
+                diagram.layout.vertexSpacing = RadialTreeLayout.Loose;
+            }
+            else if (value === "TreeLeafCompact") {
+                diagram.layout.vertexSpacing = RadialTreeLayout.TreeLeafCompact;
+            }
+            else if (value === "RootChildrenLoose") {
+                diagram.layout.vertexSpacing = RadialTreeLayout.RootChildrenLoose;
+            }
 
             diagram.layoutDiagram(true);
         };
@@ -36,7 +48,11 @@
     <div id="diagramDiv" style="background-color: white; border: solid 1px blue; width: 100%; height: 800px;"></div>
     <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Directed')">有向树</button>
     <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Undirected')">无向树</button>
-    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Defalut')">默认层</button>
-    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Outermost')">最外层</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Defalut')">叶顶点在默认层</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Outermost')">叶顶点在最外层</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Compact')">紧密</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Loose')">松散</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('TreeLeafCompact')">最外层紧密</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('RootChildrenLoose')">第一层松散</button>
 </body>
 </html>
