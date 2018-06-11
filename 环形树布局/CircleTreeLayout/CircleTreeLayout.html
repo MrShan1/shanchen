@@ -39,6 +39,18 @@
             else if (value === "RootChildrenLoose") {
                 diagram.layout.vertexSpacing = RadialTreeLayout.RootChildrenLoose;
             }
+            else if (value === "360") {
+                diagram.layout.treeSweepAngle = 360;
+            }
+            else if (value === "180") {
+                diagram.layout.treeSweepAngle = 180;
+            }
+            else if (value === "-180") {
+                diagram.layout.treeStartAngle = -180;
+            }
+            else if (value === "-90") {
+                diagram.layout.treeStartAngle = -90;
+            }
 
             diagram.layoutDiagram(true);
         };
@@ -54,5 +66,9 @@
     <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('Loose')">松散</button>
     <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('TreeLeafCompact')">最外层紧密</button>
     <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('RootChildrenLoose')">第一层松散</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('360')">环形</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('180')">半环形</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('-180')">从-180度开始</button>
+    <button style="border: solid 1px blue; width: auto; height: 30px" onclick="relayout('-90')">从-90度开始</button>
 </body>
 </html>
