@@ -65,11 +65,10 @@ function createDiagram() {
         $(go.Link,
             {
                 //isLayoutPositioned: false
-
                 //routing: go.Link.Orthogonal,
-
                 routing: go.Link.Normal,
                 //curve: go.Link.Bezier,
+                //adjusting: go.Link.None
             },
             $(go.Shape),
             $(go.Shape,
@@ -90,6 +89,7 @@ function createLayout() {
                 //isInitial: true,
                 //isOngoing: false,
                 isDirected: false,
+                //treeSweepAngle: 180,
             }
         );
 
