@@ -21,18 +21,37 @@ AdvancedCirlcularLayout.prototype.createNetwork = function () {
 };
 
 AdvancedCirlcularLayout.prototype.commitLayout = function () {
-    var centerPoint = this.actualCenter.copy();
+    var centerPoint = this.actualCenter;
+    var diameter = this.actualXRadius * 2;
 
     this.network.edges.each(function (edge) {
         var link = edge.link;
         if (link) {
-            var index = Math.floor(link.pointsCount / 2);
+            var from = edge.fromVertex.bounds.center;
+            var to = edge.toVertex.bounds.center;
+            var midPointX = (from.x + to.x) / 2;
+            var midPointY = (from.y + to.y) / 2;
+            var dx = midPointX - centerPoint.x;
+            var dy = midPointY - centerPoint.y;
+            var d = Math.sqrt(dx * dx + dy * dy);
+            var sx = to.x - from.x;
+            var sy = to.y - from.y;
+            var s = Math.sqrt(sx * sx + sy * sy);
+            var curviness = 0;
 
-            link.startRoute();
-            link.insertPoint(index, centerPoint);
-            link.commitRoute();
+            if ((dy < 0 && from.x < to.x)
+                || (dy > 0 && from.x > to.x)) {
+                curviness = -d;
+            }
+            else {
+                curviness = d;
+            }
 
-            //link.points.insertAt(index, centerPoint);
+            var percent = (s + 50) / diameter;
+            percent = percent < 0.8 ? percent : 0.8;
+
+            link.curviness = curviness * percent;
+            link.curve = go.Link.Bezier;
         }
     });
 

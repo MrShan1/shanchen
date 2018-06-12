@@ -6,8 +6,6 @@ var diagram = null;
 function init() {
     createDiagram();
 
-    createLayout();
-
     loadData();
 };
 
@@ -41,12 +39,12 @@ function createDiagram() {
             //}).makeTwoWay(function (p, d) {
             //    return new go.Rect(p.x, p.y, d.bounds.width, d.bounds.height);
             //}),
-            new go.Binding("width", "importance", function (data, obj) {
-                return obj.width * data;
-            }),
-            new go.Binding("height", "importance", function (data, obj) {
-                return obj.height * data;
-            }),
+            //new go.Binding("width", "importance", function (data, obj) {
+            //    return obj.width * data;
+            //}),
+            //new go.Binding("height", "importance", function (data, obj) {
+            //    return obj.height * data;
+            //}),
             $(go.Shape, "Circle",
                 new go.Binding("fill", "color")
             ),
@@ -68,8 +66,8 @@ function createDiagram() {
 
                 //routing: go.Link.Orthogonal,
 
-                routing: go.Link.Normal,
-                curve: go.Link.Bezier,
+                //routing: go.Link.Normal,
+                //curve: go.Link.Bezier,
             },
             $(go.Shape),
             $(go.Shape,
@@ -106,14 +104,14 @@ function loadData() {
         //var count = node.findLinksOutOf().count;
         var importance = 1;
 
-        if (count < 100) {
-            importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.2;
-        }
-        else {
-            importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.1;
-        }
+        //if (count < 100) {
+        //    importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.2;
+        //}
+        //else {
+        //    importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.1;
+        //}
 
-        diagram.model.setDataProperty(node.data, "importance", importance);
+        //diagram.model.setDataProperty(node.data, "importance", importance);
     });
 
     diagram.layoutDiagram(true);
