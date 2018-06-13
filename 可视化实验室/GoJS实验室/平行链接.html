@@ -34,12 +34,8 @@
                 $$(go.Node, "Auto",
                     {
                         //isLayoutPositioned: false,
-                        //fromLinkable: true,
-                        //fromLinkableDuplicates: true,
-                        //toLinkable: true,
-                        //toLinkableDuplicates: true,
-                        width: 30,
-                        height: 30,
+                        width: 40,
+                        height: 40,
                         locationSpot: go.Spot.Center,
                     },
                     //new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
@@ -51,6 +47,12 @@
                     $$(go.Shape, "Circle",
                         {
                             portId: "",
+                            fromLinkable: true,
+                            fromLinkableDuplicates: true,
+                            toLinkable: true,
+                            toLinkableDuplicates: true,
+                            fromLinkableSelfNode: true,
+                            toLinkableSelfNode: true,
                         },
                         new go.Binding("fill", "color")
                     ),
@@ -67,8 +69,8 @@
                     {
                         //isLayoutPositioned: false,
                         //routing: go.Link.Orthogonal,
-                        //relinkableFrom: true,
-                        //relinkableTo: true,
+                        relinkableFrom: true,
+                        relinkableTo: true,
                         routing: go.Link.Normal,
                         //curve: go.Link.Bezier,
                     },
@@ -76,14 +78,15 @@
                     $$(go.Shape,
                         {
                             //toArrow: "Standard",
-                            strokeWidth: 2,
-                            stroke: "red",
+                            strokeWidth: 1,
+                            stroke: "gray",
+                            fill: "gray",
                             segmentIndex: 3,
                             segmentFraction: 1,
                             //segmentFraction: 10,
                             segmentOrientation: go.Link.OrientAlong,
                             segmentOffset: new go.Point(-10, 0),
-                            geometryString: "m 0,0 l 8,4 -8,4",
+                            geometryString: "F m 0,0 l 8,4 -8,4 z",
                         }),
                     $$(go.TextBlock,
                         {
@@ -156,9 +159,19 @@
                         to: to.key
                     });
 
+                    //linkArray.push({
+                    //    from: next.key,
+                    //    to: to.key
+                    //});
+
                     linkArray.push({
                         from: to.key,
-                        to: next.key
+                        to: to.key
+                    });
+
+                    linkArray.push({
+                        from: to.key,
+                        to: to.key
                     });
                 }
             }

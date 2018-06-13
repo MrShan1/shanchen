@@ -34,10 +34,6 @@
                 $$(go.Node, "Auto",
                     {
                         //isLayoutPositioned: false,
-                        //fromLinkable: true,
-                        //fromLinkableDuplicates: true,
-                        //toLinkable: true,
-                        //toLinkableDuplicates: true,
                         width: 30,
                         height: 30,
                         locationSpot: go.Spot.Center,
@@ -51,6 +47,12 @@
                     $$(go.Shape, "Circle",
                         {
                             portId: "",
+                            //fromLinkable: true,
+                            //fromLinkableDuplicates: true,
+                            //toLinkable: true,
+                            //toLinkableDuplicates: true,
+                            //fromLinkableSelfNode: true,
+                            //toLinkableSelfNode: true,
                         },
                         new go.Binding("fill", "color")
                     ),
