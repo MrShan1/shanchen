@@ -48,6 +48,15 @@ function createDiagram() {
                 return obj.height * data;
             }),
             $(go.Shape, "Circle",
+                {
+                    portId: "",
+                    fromLinkable: true,
+                    fromLinkableDuplicates: true,
+                    toLinkable: true,
+                    toLinkableDuplicates: true,
+                    fromLinkableSelfNode: true,
+                    toLinkableSelfNode: true,
+                },
                 new go.Binding("fill", "color")
             ),
             $(go.TextBlock,
@@ -66,6 +75,8 @@ function createDiagram() {
             {
                 //isLayoutPositioned: false
                 //routing: go.Link.Orthogonal,
+                relinkableFrom: true,
+                relinkableTo: true,
                 routing: go.Link.Normal,
                 //curve: go.Link.Bezier,
                 //adjusting: go.Link.None

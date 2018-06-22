@@ -95,7 +95,7 @@ ParallelLink.prototype.computePoints = function () {
             // 添加到达拐角点
             this.insertPointAt(5, toX, toY);
 
-            this.routing = go.Link.Orthogonal;
+            //this.routing = go.Link.Orthogonal;
 
             return true;
         }
@@ -130,7 +130,7 @@ ParallelLink.prototype.getLinkPoint = function (node, port, spot, from, ortho, o
     }
 
     var point = new go.Point(NaN, NaN);
-    
+
     if (from === true) {
         var startPoint = port.getDocumentPoint(go.Spot.Left);
 
@@ -145,8 +145,17 @@ ParallelLink.prototype.getLinkPoint = function (node, port, spot, from, ortho, o
     return point;
 };
 
-ParallelLink.prototype.makeGeometry = function () {
-    //alert("啊哦");
+ParallelLink.prototype.computeCurve = function () {
+    if (this.fromNode === this.toNode) {
+        return go.Link.Normal;
+    }
+    else {
+        go.Link.prototype.computeCurve.apply(this, arguments);
+    }
 };
+
+//ParallelLink.prototype.makeGeometry = function () {
+//    //alert("啊哦");
+//};
 
 //#endregion 平行链接
