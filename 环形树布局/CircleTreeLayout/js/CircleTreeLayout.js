@@ -114,6 +114,8 @@ RadialTreeLayout.prototype.addTree = function (tree) {
 * 默认横向排列
 */
 RadialTreeLayout.prototype.arrangeTrees = function () {
+    if (this.trees.count === 0) return;
+
     var trees = this.trees;
     var treeCount = trees.count;
     var firstX = trees.first().bounds.center.x;
@@ -249,6 +251,20 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
         // 为顶点创建径向树
         layout.buildTreeForVertex(vertex, isRelateChildrenOnly);
     });
+};
+
+/**
+* 复制布局模板
+*
+* @param {RadialTreeLayout} copy 要进行复制的布局
+* @override
+*/
+RadialTreeLayout.prototype.cloneProtected = function (copy) {
+    go.Layout.prototype.cloneProtected.apply(this, arguments);
+
+    copy._isDirected = this._isDirected;
+    copy._treeLeafLayer = this._treeLeafLayer;
+    copy._vertexSpacing = this._vertexSpacing;
 };
 
 /**

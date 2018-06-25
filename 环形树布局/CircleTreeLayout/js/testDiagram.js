@@ -20,6 +20,9 @@ function createDiagram() {
                 contentAlignment: go.Spot.Center,
                 "undoManager.isEnabled": false,
                 "animationManager.isEnabled": true,
+                allowDrop: true,
+                mouseDrop: function (e) { finishDrop(e, null); },
+                "commandHandler.archetypeGroupData": { text: "Group", isGroup: true, color: "blue" },
             }
         );
 
@@ -34,6 +37,7 @@ function createDiagram() {
                 width: 50,
                 height: 50,
                 locationSpot: go.Spot.Center,
+                mouseDrop: function (e, nod) { finishDrop(e, nod.containingGroup); },
             },
             //new go.Binding("position", "position", go.Point.parse).makeTwoWay(go.Point.stringify),
             //new go.Binding("position", "bounds", function (b) {
@@ -91,6 +95,70 @@ function createDiagram() {
                   }
             )
         );
+
+    diagram.groupTemplate =
+        $(go.Group, "Auto",
+            {
+                background: "transparent",
+                ungroupable: true,
+                computesBoundsAfterDrag: true,
+                mouseDragEnter: function (e, grp, prev) { highlightGroup(e, grp, true); },
+                mouseDragLeave: function (e, grp, next) { highlightGroup(e, grp, false); },
+                mouseDrop: finishDrop,
+                handlesDragDropForMembers: true,
+                layout:
+                      $(RadialTreeLayout,
+                          {
+                              //isInitial: true,
+                              //isOngoing: false,
+                              //isDirected: false,
+                              //treeSweepAngle: 180,
+                              vertexSpacing: RadialTreeLayout.RootChildrenLoose,
+                          }
+                      ),
+            },
+            new go.Binding("background", "isHighlighted", function (h) {
+                return h ? "rgba(255,0,0,0.2)" : "transparent";
+            }).ofObject(),
+            $(go.Shape, "Circle",
+                {
+                    fill: "#FFDD33",
+                    stroke: "#FFDD33",
+                    strokeWidth: 2
+                }
+            ),
+            $(go.Panel, "Vertical",
+                //$(go.Panel, "Horizontal",
+                //    {
+                //        stretch: go.GraphObject.Horizontal,
+                //        background: "#FFDD33"
+                //    },
+                //    $("SubGraphExpanderButton",
+                //        {
+                //            alignment: go.Spot.Right,
+                //            margin: 5
+                //        }
+                //    ),
+                //    $(go.TextBlock,
+                //        {
+                //          alignment: go.Spot.Left,
+                //          editable: true,
+                //          margin: 5,
+                //          font: "bold 16px sans-serif",
+                //          opacity: 0.75,
+                //          stroke: "#404040"
+                //        },
+                //        new go.Binding("text", "text").makeTwoWay()
+                //    )
+                //),
+                $(go.Placeholder,
+                    {
+                        padding: 5,
+                        alignment: go.Spot.TopLeft
+                    }
+                )
+            )
+        );
 };
 
 function createLayout() {
@@ -101,6 +169,8 @@ function createLayout() {
                 //isOngoing: false,
                 isDirected: false,
                 //treeSweepAngle: 180,
+                //treeLeafLayer: RadialTreeLayout.OutermostLayer,
+                //vertexSpacing: RadialTreeLayout.RootChildrenLoose,
             }
         );
 
@@ -177,4 +247,28 @@ function generateLinks(model, min, max) {
 
     model.linkDataArray = linkArray;
     //model.addLinkDataCollection(linkArray);
+};
+
+function highlightGroup(e, grp, show) {
+    if (!grp) return;
+    e.handled = true;
+    if (show) {
+        // cannot depend on the grp.diagram.selection in the case of external drag-and-drops;
+        // instead depend on the DraggingTool.draggedParts or .copiedParts
+        var tool = grp.diagram.toolManager.draggingTool;
+        var map = tool.draggedParts || tool.copiedParts;  // this is a Map
+        // now we can check to see if the Group will accept membership of the dragged Parts
+        if (grp.canAddMembers(map.toKeySet())) {
+            grp.isHighlighted = true;
+            return;
+        }
+    }
+    grp.isHighlighted = false;
+};
+
+function finishDrop(e, grp) {
+    var ok = (grp !== null
+              ? grp.addMembers(grp.diagram.selection, true)
+              : e.diagram.commandHandler.addTopLevelParts(e.diagram.selection, true));
+    if (!ok) e.diagram.currentTool.doCancel();
 };
