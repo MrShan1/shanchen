@@ -2,12 +2,15 @@
 var $$ = go.GraphObject.make; // 简化定义模板，避免使用$（与jQuery冲突）
 
 function SectorContextMenu(buttonDataArray) {
+    go.Adornment.call(this);
+
     this.configAdornment();
     this.menuButtonTemplate = this.createMenuButtonTemplate(this.initialButtonWidth, this.initialButtonHeight);
     this.makeSectorMenu(buttonDataArray);
 };
+go.Diagram.inherit(SectorContextMenu, go.Adornment);
 
-SectorContextMenu.prototype = new go.Adornment();
+//SectorContextMenu.prototype = new go.Adornment();
 
 //SectorContextMenu.prototype.constructor = SectorContextMenu;
 
