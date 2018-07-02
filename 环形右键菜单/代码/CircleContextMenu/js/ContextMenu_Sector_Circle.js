@@ -133,12 +133,14 @@ SectorContextMenu.prototype.computeSectorDistance = function (rootOuterRadius, r
     return sectorDistance;
 };
 
-SectorContextMenu.prototype.computeSweepAngle = function (outerRadius) {
+SectorContextMenu.prototype.computeSweepAngle = function (outerRadius, parentSweepAngle, count) {
     var width = this.initialButtonWidth;
     var outer = outerRadius;
     var sweep = Math.asin(width / 2 / outer) * 360 / Math.PI;
 
-    return sweep;
+    var sweep1 = parentSweepAngle / count;
+
+    return sweep > sweep1 ? sweep : sweep1;
 };
 
 SectorContextMenu.prototype.configAdornment = function () {
@@ -173,7 +175,8 @@ SectorContextMenu.prototype.createInfoPanel = function (imagePath, text) {
                         fill: $$(go.Brush, "Linear",
                                 {
                                     0: "#2786de",
-                                    1: "green"
+                                    //1: "green"
+                                    1: "gray"
                                 }
                             ),
                         //desiredSize: new go.Size(20, 20),
@@ -403,10 +406,11 @@ SectorContextMenu.prototype.createSectorMenuButtonTemplate = function (width, he
 SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngle, parentSweepAngle, parentRadius, parentHeight, parent) {
     var innerRadius = this.computeInnerRadius(parentRadius, parentHeight);
     var outerRadius = this.computeOuterRadius(innerRadius);
-    var sweep = this.computeSweepAngle(outerRadius);
+    var sweep = this.computeSweepAngle(outerRadius, parentSweepAngle,buttonDataArray.length);
     var distance = this.computeDistance(innerRadius, sweep);
     var height = this.computeHeight(outerRadius, distance);
-    var width = this.initialButtonWidth;
+    //var width = this.initialButtonWidth;
+    var width = this.computeRootWidth(sweep, outerRadius);
     var radius = this.computeRadius(distance, height);
     var template = this.createSectorMenuButtonTemplate(width, height, sweep, innerRadius, outerRadius);
 
