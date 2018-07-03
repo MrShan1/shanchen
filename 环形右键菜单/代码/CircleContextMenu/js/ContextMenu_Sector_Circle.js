@@ -61,7 +61,7 @@ SectorContextMenu.prototype.computeHeight = function (outerRadius, distance) {
 };
 
 SectorContextMenu.prototype.computeInnerRadius = function (parentRadius, parentHeight) {
-    var radius = parentRadius + parentHeight / 2;
+    var radius = parentRadius + parentHeight / 2 + 5;
 
     return radius;
 };
@@ -223,17 +223,20 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
             {
                 desiredSize: new go.Size(width, height),
                 alignmentFocus: go.Spot.Center,
-                "ButtonBorder.stroke": "#f7f7f7",
+                //"ButtonBorder.stroke": "#f7f7f7",
+                "ButtonBorder.stroke": "rgba(82, 82, 88, 0.90)",
                 "ButtonBorder.strokeWidth": 1,
                 //"ButtonBorder.fill": "#4b51d0",
                 //"ButtonBorder.fill": "#008feb",
-                "ButtonBorder.fill": " rgba(82, 82, 88, 0.70)",
+                "ButtonBorder.fill": "rgba(82, 82, 88, 0.90)",
                 "ButtonBorder.figure": "Rectangle",
                 mouseEnter: function (e, obj) {
                     obj.isExpanded = true;
                 },
                 mouseLeave: function (e, obj) {
-
+                    if (obj.children.count === 0) {
+                        obj.isExpanded = false;
+                    }
                 },
                 //mouseEnter: function (e, obj) {
                 //    obj.setProperties({
@@ -281,12 +284,15 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
         copy.cloneProtected = this.cloneProtected;
         copy.parent = null;
         copy.children = new go.List();
-        copy._isExpanded = this._isExpanded;
+        copy._isExpanded = false;
         Object.defineProperty(copy, "isExpanded", {
             get: function () {
                 return this._isExpanded;
             },
             set: function (value) {
+
+                if (this._isExpanded === value) return;
+
                 this._isExpanded = value;
 
                 if (this._isExpanded === true) {
@@ -296,6 +302,34 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
                     });
 
                     this.showChildren();
+
+                    //this.alignment = this.alignment2;
+
+                    function up(obj, index) {
+                        var alignment1 = obj.alignment1;
+                        var alignment2 = obj.alignment2;
+                        var dx = alignment2.offsetX - alignment1.offsetX;
+                        var dy = alignment2.offsetY - alignment1.offsetY;
+
+                        var ox = alignment1.offsetX + dx * index / 100;
+                        var oy = alignment1.offsetY + dy * index / 100;
+
+                        obj.alignment = new go.Spot(obj.alignment.x, obj.alignment.y, ox, oy);
+
+                        obj.children.each(function (child) {
+                            child.opacity = index / 100;
+                        });
+
+                        if (index / 100 < 1) {
+                            index += 10;
+
+                            requestAnimationFrame(function () {
+                                up(obj, index);
+                            });
+                        }
+                    };
+
+                    up(this, 0);
                 }
                 else {
                     this.setProperties({
@@ -303,7 +337,38 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
                         "ButtonBorder.fill": "rgba(82, 82, 88, 0.90)"
                     });
 
-                    this.hideChildren();
+                    //this.hideChildren();
+
+                    //this.alignment = this.alignment1;
+
+                    function down(obj, index) {
+                        var alignment1 = obj.alignment1;
+                        var alignment2 = obj.alignment2;
+                        var dx = alignment2.offsetX - alignment1.offsetX;
+                        var dy = alignment2.offsetY - alignment1.offsetY;
+
+                        var ox = alignment2.offsetX - dx * index / 100;
+                        var oy = alignment2.offsetY - dy * index / 100;
+
+                        obj.alignment = new go.Spot(obj.alignment.x, obj.alignment.y, ox, oy);
+
+                        obj.children.each(function (child) {
+                            child.opacity = 1-index / 100;
+                        });
+
+                        if (index / 100 < 1) {
+                            index += 10;
+
+                            requestAnimationFrame(function () {
+                                down(obj, index);
+                            });
+                        }
+                        else {
+                            obj.hideChildren();
+                        }
+                    };
+
+                    down(this, 0);
                 }
             }
         });
@@ -345,32 +410,6 @@ SectorContextMenu.prototype.createMenuButtonTemplate = function (width, height) 
         });
     };
 
-    Object.defineProperty(template, "isExpanded", {
-        get: function () {
-            return this._isExpanded;
-        },
-        set: function (value) {
-            this._isExpanded = value;
-
-            if (this._isExpanded === true) {
-                this.setProperties({
-                    //"ButtonBorder.fill": "#4b51d0"
-                    "ButtonBorder.fill": "rgba(82, 82, 88, 0.70)"
-                });
-
-                this.showChildren();
-            }
-            else {
-                this.setProperties({
-                    //"ButtonBorder.fill": "#008feb"
-                    "ButtonBorder.fill": "rgba(82, 82, 88, 0.90)"
-                });
-
-                this.hideChildren();
-            }
-        }
-    });
-
     return template;
 };
 
@@ -406,7 +445,7 @@ SectorContextMenu.prototype.createSectorMenuButtonTemplate = function (width, he
 SectorContextMenu.prototype.makeChildren = function (buttonDataArray, parentAngle, parentSweepAngle, parentRadius, parentHeight, parent) {
     var innerRadius = this.computeInnerRadius(parentRadius, parentHeight);
     var outerRadius = this.computeOuterRadius(innerRadius);
-    var sweep = this.computeSweepAngle(outerRadius, parentSweepAngle,buttonDataArray.length);
+    var sweep = this.computeSweepAngle(outerRadius, parentSweepAngle, buttonDataArray.length);
     var distance = this.computeDistance(innerRadius, sweep);
     var height = this.computeHeight(outerRadius, distance);
     //var width = this.initialButtonWidth;
@@ -454,6 +493,8 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
     var func = buttonData[this.funcProperty];
     var offsetX = Math.cos(angle * Math.PI / 180) * radius;
     var offsetY = Math.sin(angle * Math.PI / 180) * radius;
+    var offsetX1 = Math.cos(angle * Math.PI / 180) * (radius + 5);
+    var offsetY1 = Math.sin(angle * Math.PI / 180) * (radius + 5);
     var height = menuButton.height;
 
     //new CustomContextMenuButton().adorn(menuButton);
@@ -471,7 +512,9 @@ SectorContextMenu.prototype.makeSectorMenuButton = function (buttonData, templat
 
     menuButton.angle = rotateAngle;
 
-    menuButton.alignment = new go.Spot(0.5, 0.5, offsetX, offsetY);
+    menuButton.alignment1 = new go.Spot(0.5, 0.5, offsetX, offsetY);
+    menuButton.alignment2 = new go.Spot(0.5, 0.5, offsetX1, offsetY1);
+    menuButton.alignment = menuButton.alignment1;
 
     menuButton.visible = (parent instanceof go.Adornment);
     //menuButton.visible = true;
