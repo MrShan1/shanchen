@@ -19,11 +19,11 @@
 
             var buttonDataArraySimple = [
                 {
-                    imagePath: "images/工具.png",
+                    //imagePath: "images/工具.png",
                     text: "测试1",
                     children: [
                         {
-                            imagePath: "images/工具.png",
+                            //imagePath: "images/工具.png",
                             text: "测试1-1",
                             func: function () { alert("恭喜你，测试成功!(1-1)") },
                             children: [
@@ -31,7 +31,7 @@
                             ]
                         },
                         {
-                            imagePath: "images/工具.png",
+                            //imagePath: "images/工具.png",
                             text: "测试1-2",
                             func: function () { alert("恭喜你，测试成功!(1-2)") },
                             children: [
@@ -41,21 +41,21 @@
                     ]
                 },
                 {
-                    imagePath: "images/工具.png",
+                    //imagePath: "images/工具.png",
                     text: "测试2",
                     children: [
 
                     ]
                 },
                 {
-                    imagePath: "images/工具.png",
+                    //imagePath: "images/工具.png",
                     text: "测试3",
                     children: [
 
                     ]
                 },
                 {
-                    imagePath: "images/工具.png",
+                    //imagePath: "images/工具.png",
                     text: "测试4",
                     children: [
 
@@ -258,6 +258,12 @@
                     str += "top-level node";
                 return str;
             }
+
+            //myDiagram.toolManager.contextMenuTool.showContextMenu = function (contextmenu, obj) {
+            //    this.diagram.centerRect(obj.actualBounds);
+
+            //    go.ContextMenuTool.prototype.showContextMenu.apply(this, arguments);
+            //};
 
             // These nodes have text surrounded by a rounded rectangle
             // whose fill color is bound to the node data.
