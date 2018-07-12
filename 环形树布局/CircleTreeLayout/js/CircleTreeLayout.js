@@ -149,20 +149,21 @@ RadialTreeLayout.prototype.arrangeTrees = function () {
 * 为顶点创建径向树
 *
 * @param {RadialTreeVertex} vertex 径向树顶点
-* @param {Boolean} isRelateChildrenOnly 是否只关联后代
 */
-RadialTreeLayout.prototype.buildTreeForVertex = function (vertex, isRelateChildrenOnly) {
+RadialTreeLayout.prototype.buildTreeForVertex = function (vertex) {
     // 为目标顶点创建树形关系
-    var treeVertexes = this.bulidTreeRelationForVertex(vertex, isRelateChildrenOnly);
+    var treeVertexes = this.bulidTreeRelationForVertex(vertex);
 
-    // 创建径向树
-    var tree = new RadialTree(treeVertexes);
+    if (treeVertexes.count > 0) {
+        // 创建径向树
+        var tree = new RadialTree(treeVertexes);
 
-    // 将径向树添加进子树集合中
-    this.addTree(tree);
+        // 将径向树添加进子树集合中
+        this.addTree(tree);
 
-    // 初始化径向树
-    tree.initialize();
+        // 初始化径向树
+        tree.initialize();
+    }
 };
 
 /**
@@ -172,46 +173,61 @@ RadialTreeLayout.prototype.buildTreeForVertex = function (vertex, isRelateChildr
 * 目标顶点的父顶点需要关联父代和子代，目标顶点的子顶点只需要关联后代。
 *
 * @param {RadialTreeVertex} vertex 径向树顶点
-* @param {Boolean} isRelateChildrenOnly 是否只关联后代
 * @return {go.List} 目标顶点的树形关系所包含的顶点集合
 */
-RadialTreeLayout.prototype.bulidTreeRelationForVertex = function (vertex, isRelateChildrenOnly) {
-    var coll = new go.List(); // 目标顶点的树形关系所包含的顶点集合
+RadialTreeLayout.prototype.bulidTreeRelationForVertex = function (vertex) {
+    if (vertex.isInTreeRelation === true) return new go.List();
 
-    // 目标顶点已在树形关系中
+    var finishedVertexes = new go.List(); // 目标顶点的树形关系所包含的顶点集合
+    var standbyVertexes = new go.Map(); // 等待处理的顶点集合
+
+    // 有向树时，所有目标顶点均视为中间顶点，关联父代和子代关系
+    if (this.isDirected === true) {
+        standbyVertexes.add(vertex, false);
+    }
+        // 无向树时，所有目标顶点均视为根顶点，只关联子代关系
+    else {
+        standbyVertexes.add(vertex, true);
+    }
+
+    // 标识目标顶点已在树形关系中
     vertex.isInTreeRelation = true;
 
-    // 将目标顶点添加进集合中
-    coll.add(vertex);
+    while (standbyVertexes.count > 0) {
+        // 取第一个待处理顶点(取到的点将会被移除,因此后续的顶点将逐个成为第一个顶点)
+        var currentVertex = standbyVertexes.first().key;
+        var isRelateChildrenOnly = standbyVertexes.first().value;
 
-    // 需要关联父代关系
-    if (!isRelateChildrenOnly) {
-        // 设置父顶点
-        var parent = this.setParentForVertex(vertex);
+        // 标识目标顶点已在树形关系中
+        currentVertex.isInTreeRelation = true;
+        standbyVertexes.remove(currentVertex);
+        finishedVertexes.add(currentVertex);
 
-        if (parent !== null) {
-            // 为父顶点构建树形关系
-            var treeVertexes = this.bulidTreeRelationForVertex(parent, false);
-            // 将父顶点的树形关系集合添加进集合中
-            coll.addAll(treeVertexes);
+        // 需要关联父代关系
+        if (!isRelateChildrenOnly) {
+            // 设置父顶点
+            var parent = this.setParentForVertex(currentVertex);
+
+            if (parent !== null) {
+                standbyVertexes.add(parent, false);
+                parent.isInTreeRelation = true;
+            }
+        }
+
+        // 设置子顶点集合
+        var children = this.setChildrenForVertex(currentVertex);
+
+        // 为每个子顶点设置树形关系
+        var iterator = children.iterator;
+        while (iterator.next()) {
+            var child = iterator.value;
+
+            standbyVertexes.add(child, true);
+            child.isInTreeRelation = true;
         }
     }
 
-    // 设置子顶点集合
-    var children = this.setChildrenForVertex(vertex);
-
-    // 为每个子顶点设置树形关系
-    var iterator = children.iterator;
-    while (iterator.next()) {
-        var child = iterator.value;
-
-        // 为子顶点设置树形关系
-        var treeVertexes = this.bulidTreeRelationForVertex(child, true);
-        // 将子顶点的树形关系集合添加进集合中
-        coll.addAll(treeVertexes);
-    }
-
-    return coll;
+    return finishedVertexes;
 };
 
 /**
@@ -224,23 +240,13 @@ RadialTreeLayout.prototype.bulidTreeRelationForVertex = function (vertex, isRela
 RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
     var layout = this;
     var network = this.network;
-    var isRelateChildrenOnly = false;
-
-    // 有向树时，所有目标顶点均视为中间顶点，关联父代和子代关系
-    if (this.isDirected === true) {
-        isRelateChildrenOnly = false;
-    }
-        // 无向树时，所有目标顶点均视为根顶点，只关联子代关系
-    else {
-        isRelateChildrenOnly = true;
-    }
 
     // 优先为预设定顶点创建关系树
     defaultRoots.each(function (vertex) {
         if (vertex.isInTreeRelation === true) return;
 
         // 为顶点创建径向树
-        layout.buildTreeForVertex(vertex, isRelateChildrenOnly);
+        layout.buildTreeForVertex(vertex);
 
     });
 
@@ -249,7 +255,7 @@ RadialTreeLayout.prototype.buildTrees = function (defaultRoots) {
         if (vertex.isInTreeRelation === true) return;
 
         // 为顶点创建径向树
-        layout.buildTreeForVertex(vertex, isRelateChildrenOnly);
+        layout.buildTreeForVertex(vertex);
     });
 };
 

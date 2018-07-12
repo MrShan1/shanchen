@@ -144,7 +144,7 @@ SectorContextMenu.prototype.computeSweepAngle = function (outerRadius, parentSwe
 };
 
 SectorContextMenu.prototype.configAdornment = function () {
-    this.type = go.Panel.Spot
+    this.type = go.Panel.Spot;
     this.add(new go.Placeholder());
 };
 

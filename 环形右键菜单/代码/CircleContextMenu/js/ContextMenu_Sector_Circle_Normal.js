@@ -187,7 +187,7 @@ SectorContextMenu.prototype.computeRootOuterRadius = function (part, layerIndex)
     // 计算根元素的外环半径
     var rootOuterRadius = radius - (this.sectorDistance + this.sectorThickness) * layerIndex;
 
-    // 设置根元素的外环半径(向上取整,稍大一些)
+    // 设置根元素的外环半径(向上取整,使环形稍大一些)
     if (this.rootOuterRadius < rootOuterRadius) {
         this.rootOuterRadius = Math.ceil(rootOuterRadius);
     }

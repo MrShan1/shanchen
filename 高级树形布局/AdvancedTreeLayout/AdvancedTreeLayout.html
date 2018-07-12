@@ -8,7 +8,7 @@
     <script src="js/testDiagram.js"></script>
     <script>
         function relayout(value) {
-            var list = new go.List();
+            var list = new go.Set();
             diagram.selection.each(function (part) {
                 part instanceof go.Node && list.add(part);
             });

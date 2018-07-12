@@ -265,6 +265,16 @@
             //    go.ContextMenuTool.prototype.showContextMenu.apply(this, arguments);
             //};
 
+            myDiagram.toolManager.contextMenuTool.positionContextMenu = function (contextMenu, obj) {
+                var bounds = contextMenu.measuredBounds;
+                var point = contextMenu.adornedPart.actualBounds.center;
+                //contextMenu.locationSpot = go.Spot.Center;
+                //contextMenu.position = new go.Point(point.x - bounds.width / 2, point.y - bounds.height / 2);
+                //contextMenu.position = new go.Point(0, 0);
+
+                //contextMenu.alignment = new go.Spot(0.1, 0.1, 100, 100);
+            };
+
             // These nodes have text surrounded by a rounded rectangle
             // whose fill color is bound to the node data.
             // The user can drag a node by dragging its TextBlock label.
