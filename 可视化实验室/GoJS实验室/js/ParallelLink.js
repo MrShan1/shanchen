@@ -44,60 +44,32 @@ ParallelLink.prototype.computePoints = function () {
         var fromNode = this.fromNode;
         var toNode = this.toNode;
         if (fromNode === toNode && this.pointsCount === 4) {
-            //if (fromPoint.x > toPoint.x) {
-            //    this.curviness = -this.computeCurviness();
-            //}
-
-            //var center = fromNode.actualBounds.center;
-            //var width = fromNode.actualBounds.width;
-            //fromPoint.setTo(center.x - width / 2, center.y);
-            //toPoint.setTo(center.x + width / 2, center.y);
-
-            //var point = this.getPoint(1);
-            //point.setTo(point.x, -point.y);
-
-            //var center = fromNode.actualBounds.center;
-            //var width = fromNode.actualBounds.width;
-            //if (fromPoint.x < toPoint.x) {
-            //    fromPoint.setTo(center.x + width / 2, center.y);
-            //    toPoint.setTo(center.x - width / 2, center.y);
-            //}
-            //else {
-            //    fromPoint.setTo(center.x - width / 2, center.y);
-            //    toPoint.setTo(center.x + width / 2, center.y);
-            //}
-
-
             // 获取起始拐角点的x轴坐标
-            var fromX = fromPoint.x + dx * percent;
+            var fromX = this.getPoint(1).x;
             // 获取起始拐角点的y轴坐标
-            var fromY = fromPoint.y + dy * percent;
+            var fromY = this.getPoint(0).y;
 
             // 获取到达拐角点的x轴坐标
-            var toX = toPoint.x - dx * percent;
+            var toX = this.getPoint(2).x;
             // 获取到达拐角点的y轴坐标
-            var toY = toPoint.y - dy * percent;
+            var toY = this.getPoint(3).y;
 
-            this.clearPoints();
+            //this.clearPoints();
 
-            this.addPoint(new go.Point(fromPoint.x, fromPoint.y));
-            this.addPoint(new go.Point(centerPoint.x, centerPoint.y));
-            this.addPoint(new go.Point(toPoint.x, toPoint.y));
+            //this.addPoint(new go.Point(fromPoint.x, fromPoint.y));
+            //this.addPoint(new go.Point(centerPoint.x, centerPoint.y));
+            //this.addPoint(new go.Point(toPoint.x, toPoint.y));
 
-            oy = centerPoint.y - fromPoint.y; // 获取中心点相对于端点路由的y轴偏移量
+            //oy = centerPoint.y - fromPoint.y; // 获取中心点相对于端点路由的y轴偏移量
 
             // 添加起始拐角点
             this.insertPointAt(1, fromX, fromY);
             // 添加平行线起始点
-            this.insertPointAt(2, fromX + ox, fromY + oy);
+            //this.insertPointAt(2, fromX + ox, fromY + oy);
             // 添加平行线到达点
-            this.insertPointAt(4, toX + ox, toY + oy);
+            this.insertPointAt(4, toX, toY);
             // 添加到达拐角点
-            this.insertPointAt(5, toX, toY);
-
-            //this.routing = go.Link.Orthogonal;
-
-            return true;
+            //this.insertPointAt(5, toX, toY);
         }
         else {
             // 获取起始拐角点的x轴坐标
@@ -109,53 +81,98 @@ ParallelLink.prototype.computePoints = function () {
             var toX = fromPoint.x + dx * (1 - percent);
             // 获取到达拐角点的y轴坐标
             var toY = fromPoint.y + dy * (1 - percent);
-        }
 
-        // 添加起始拐角点
-        this.insertPointAt(fromIndex + 1, fromX, fromY);
-        // 添加平行线起始点
-        this.insertPointAt(fromIndex + 2, fromX + ox, fromY + oy);
-        // 添加平行线到达点
-        this.insertPointAt(toIndex + 2, toX + ox, toY + oy);
-        // 添加到达拐角点
-        this.insertPointAt(toIndex + 3, toX, toY);
+            // 添加起始拐角点
+            this.insertPointAt(fromIndex + 1, fromX, fromY);
+            // 添加平行线起始点
+            this.insertPointAt(fromIndex + 2, fromX + ox, fromY + oy);
+            // 添加平行线到达点
+            this.insertPointAt(toIndex + 2, toX + ox, toY + oy);
+            // 添加到达拐角点
+            this.insertPointAt(toIndex + 3, toX, toY);
+        }
     }
 
     return result;
 };
 
-ParallelLink.prototype.getLinkPoint = function (node, port, spot, from, ortho, othernode, otherport) {
-    if (node !== othernode) {
-        return go.Link.prototype.getLinkPoint.apply(this, arguments);
-    }
+//ParallelLink.prototype.getLinkPoint = function (node, port, spot, from, ortho, othernode, otherport) {
+//    if (this.fromNode === this.toNode) {
+//        var point = new go.Point(NaN, NaN);
 
-    var point = new go.Point(NaN, NaN);
+//        if (from === true) {
+//            var startPoint = this.fromNode.port.getDocumentPoint(go.Spot.Left);
 
-    if (from === true) {
-        var startPoint = port.getDocumentPoint(go.Spot.Left);
+//            point.set(startPoint);
+//        }
+//        else {
+//            var endPoint = this.toNode.port.getDocumentPoint(go.Spot.Right);
 
-        point.set(startPoint);
-    }
-    else {
-        var endPoint = port.getDocumentPoint(go.Spot.Right);
+//            point.set(endPoint);
+//        }
 
-        point.set(endPoint);
-    }
-
-    return point;
-};
+//        return point;
+//    }
+//    else {
+//        return go.Link.prototype.getLinkPoint.apply(this, arguments);
+//    }
+//};
 
 ParallelLink.prototype.computeCurve = function () {
     if (this.fromNode === this.toNode) {
         return go.Link.Normal;
     }
     else {
-        go.Link.prototype.computeCurve.apply(this, arguments);
+        return go.Link.prototype.computeCurve.apply(this, arguments);
     }
 };
 
-//ParallelLink.prototype.makeGeometry = function () {
-//    //alert("啊哦");
-//};
+ParallelLink.prototype.makeGeometry = function () {
+    if (this.fromNode === this.toNode) {
+        return go.Link.prototype.makeGeometry.apply(this, arguments);
+    }
+    else {
+        return new go.Geometry()
+            .add(new go.PathFigure(p.x, p.y)
+            .add(new go.PathSegment(go.PathSegment.Arc, -sweep / 2, sweep, 0, 0, radius + layerThickness, radius + layerThickness))
+            .add(new go.PathSegment(go.PathSegment.Line, q.x, q.y))
+            .add(new go.PathSegment(go.PathSegment.Arc, sweep / 2, -sweep, 0, 0, radius, radius).close()));
+    }
+};
+
+ParallelLink.prototype.computeSpot = function (from, port) {
+    if (this.fromNode === this.toNode) {
+        return from === true ? go.Spot.Right : go.Spot.Left;
+    }
+    else {
+        return go.Link.prototype.computeSpot.apply(this, arguments);
+    }
+};
+
+ParallelLink.prototype.computeCurviness = function (from, port) {
+    if (this.fromNode === this.toNode) {
+        var links = this.fromNode.findLinksBetween(this.toNode);
+        var index = 0;
+        var iterator = links.iterator;
+
+        while (iterator.next()) {
+            var link = iterator.value;
+
+            if (this === link) {
+                break;
+            }
+            else {
+                index++;
+            }
+        }
+
+        var height = this.fromNode.actualBounds.height;
+
+        return height / 2 + 10 + index * 15;
+    }
+    else {
+        return go.Link.prototype.computeCurviness.apply(this, arguments);
+    }
+};
 
 //#endregion 平行链接
