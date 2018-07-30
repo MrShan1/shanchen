@@ -12,7 +12,7 @@ function SectorContextMenu(buttonDataArray) {
     // 子元素集合
     this.children = new go.List();
     // 根按钮层的内层半径
-    this.rootOuterRadius = this.minRootOuterRadius;
+    this.rootInnerRadius = this.minRootInnerRadius;
 
     // 配置右键菜单的基本属性
     this.configAdornment();
@@ -38,7 +38,7 @@ SectorContextMenu.prototype.minButtonWidth = 70;
 /**
 * @property {Number} 根按钮层的最小外环半径
 */
-SectorContextMenu.prototype.minRootOuterRadius = 40;
+SectorContextMenu.prototype.minRootInnerRadius = 40;
 
 /**
 * @property {Number} 扇形间距
@@ -163,33 +163,18 @@ SectorContextMenu.prototype.computeRootDistance = function (sweepAngle) {
 *
 * @return {Number} 内环半径
 */
-SectorContextMenu.prototype.computeRootInnerRadius = function () {
-    // 计算根元素的内环半径
-    var innerRadius = this.rootOuterRadius - this.sectorDistance;
-
-    return innerRadius;
-};
-
-/**
-* 计算根元素的外环半径
-*
-* 须遍历每一层按钮,确认每层按钮的总弧长不超过360度
-*
-* @param {SectorContextMenu|SectorContextMenuButton} part 本层级按钮的父元素
-* @param {Number} layerIndex 本层级索引
-*/
-SectorContextMenu.prototype.computeRootOuterRadius = function (part, layerIndex) {
+SectorContextMenu.prototype.computeRootInnerRadius = function (part, layerIndex) {
     var width = this.minButtonWidth;
     var count = part.children.count;
 
     // 计算本层的外环半径
     var radius = width / 2 / Math.sin(2 * Math.PI / count);
-    // 计算根元素的外环半径
-    var rootOuterRadius = radius - (this.sectorDistance + this.sectorThickness) * layerIndex;
+    // 计算根元素的内环半径
+    var rootInnerRadius = radius - this.sectorDistance - (this.sectorDistance + this.sectorThickness) * layerIndex;
 
-    // 设置根元素的外环半径(向上取整,使环形稍大一些)
-    if (this.rootOuterRadius < rootOuterRadius) {
-        this.rootOuterRadius = Math.ceil(rootOuterRadius);
+    // 设置根元素的内环环半径(向上取整,使环形稍大一些)
+    if (this.rootInnerRadius < rootInnerRadius) {
+        this.rootInnerRadius = Math.ceil(rootInnerRadius);
     }
 
     var iterator = part.children.iterator;
@@ -198,8 +183,37 @@ SectorContextMenu.prototype.computeRootOuterRadius = function (part, layerIndex)
         if (child.children.count === 0) continue;
 
         // 向下递归,继续计算根元素的外环半径
-        this.computeRootOuterRadius(child, layerIndex + 1);
+        this.computeRootInnerRadius(child, layerIndex + 1);
     }
+
+    //var stanbyParts = new go.List();
+    //stanbyParts.add(this);
+    //while (stanbyParts.count > 0) {
+    //    var count = part.children.count;
+    //    // 计算本层的外环半径
+    //    var radius = width / 2 / Math.sin(2 * Math.PI / count);
+    //    // 计算根元素的内环半径
+    //    var tempRootInnerRadius = radius - this.sectorDistance - (this.sectorDistance + this.sectorThickness) * layerIndex;
+
+    //    // 设置根元素的内环环半径(向上取整,稍大一些)
+    //    if (rootInnerRadius < tempRootInnerRadius) {
+    //        rootInnerRadius = Math.ceil(tempRootInnerRadius);
+    //    }
+    //}
+};
+
+/**
+* 计算根元素的外环半径
+*
+* 须遍历每一层按钮,确认每层按钮的总弧长不超过360度
+*
+* @return {Number} 外环半径
+*/
+SectorContextMenu.prototype.computeRootOuterRadius = function () {
+    // 计算根元素的外环半径
+    var outRadius = this.rootInnerRadius + this.sectorDistance;
+
+    return outRadius;
 };
 
 SectorContextMenu.prototype.computeRootSweepAngle = function (childCount) {
