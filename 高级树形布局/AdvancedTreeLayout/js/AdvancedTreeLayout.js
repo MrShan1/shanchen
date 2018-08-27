@@ -15,26 +15,6 @@ function AdvancedTreeLayout() {
 };
 go.Diagram.inherit(AdvancedTreeLayout, go.TreeLayout);
 
-AdvancedTreeLayout.prototype.assignTreeVertexValues = function (vertex) {
-    //var possibleParents = this.isDirected ? vertex.sourceVertexes : vertex.vertexes;
-    //if (possibleParents && possibleParents.count > 0) {
-    //    var topMostParent = null;
-    //    possibleParents.each(function (v) {
-    //        if (!topMostParent || v.level < topMostParent.level) {
-    //            topMostParent = v;
-    //        }
-    //    });
-
-    //    if (topMostParent && topMostParent !== vertex.parent && topMostParent.level < vertex.level - 1) {
-    //        vertex.parent = topMostParent;
-    //        vertex.level = vertex.parent.level + 1;
-    //    }
-    //}
-
-    //go.TreeLayout.prototype.assignTreeVertexValues.apply(this, arguments);
-
-};
-
 /**
 * 控制目标顶点的所有关联边线方向
 *
@@ -84,72 +64,53 @@ AdvancedTreeLayout.prototype.controlEdgesDirection = function (vertex, finishedV
     }
 };
 
-AdvancedTreeLayout.prototype.initializeTreeVertexValues = function (vertex) {
-    //var possibleChildren = this.isDirected ? vertex.destinationVertexes : vertex.vertexes;
-    //if (possibleChildren.count > 0) {
-    //    possibleChildren.each(function (child) {
-    //        if (vertex.level < child.level - 1 && child.parent !== vertex) {
-    //            child.parent = vertex;
-    //            child.level = vertex.level + 1;
-
-    //            var edges = this.isDirected ? child.sourceEdges : child.edges;
-    //            if (edges.count > 0) {
-    //                var deleteEdges = new go.List();
-    //                edges.each(function (edge) {
-    //                    var otherVertex = edge.getOtherVertex(child);
-    //                    if (otherVertex.level < child.level) {
-    //                        deleteEdges.add(edge);
-    //                        edge.fromVertex.deleteDestinationEdge(edge);
-    //                        edge.toVertex.deleteSourceEdge(edge);
-    //                    }
-    //                });
-
-    //                deleteEdges.each(function (edge) {
-    //                    edge.fromVertex.deleteDestinationEdge(edge);
-    //                    edge.toVertex.deleteSourceEdge(edge);
-    //                });
-    //            }
-    //        }
-    //    });
-
-    //}
-
-    go.TreeLayout.prototype.initializeTreeVertexValues.apply(this, arguments);
-};
-
+/**
+* 寻找所有的根顶点
+* 找到所有的根顶点之后，删除与树结构无关的边线
+*
+* @override
+*/
 AdvancedTreeLayout.prototype.findRoots = function () {
+    // 执行既有的寻找根顶点处理,获取所有的根顶点
     go.TreeLayout.prototype.findRoots.call(this);
 
-    var roots = this.roots;
-    var standbyVertexes = new go.Set().addAll(roots);
-    var finishedVertexes = new go.Set();
-    var finishedEdges = new go.Set();
-    var removedEdges = new go.Set();
+    var roots = this.roots; // 根顶点集合
+    var standbyVertexes = new go.Set().addAll(roots); // 等待处理的顶点集合
+    var finishedVertexes = new go.Set(); // 完成处理的顶点集合
+    var finishedEdges = new go.Set(); // 完成处理的边线集合
+    var removedEdges = new go.Set(); // 需要删除的无关边线集合
 
+    // 遍历等待处理的顶点集合,逐个分析父子关系
     while (standbyVertexes.count > 0) {
-        var vertex = standbyVertexes.first();
+        var vertex = standbyVertexes.first(); // 每次取第一个进行处理
 
         standbyVertexes.remove(vertex);
         finishedVertexes.add(vertex);
 
-        var edges = this.isDirected ? vertex.destinationEdges : vertex.edges;
+        var edges = this.isDirected ? vertex.destinationEdges : vertex.edges; // 获取所有可能的子关系边线
+
+        // 遍历可能的子关系边线,记录无关边线
         edges.each(function (edge) {
             if (!finishedEdges.contains(edge) && !removedEdges.contains(edge)) {
-                var otherVertex = edge.getOtherVertex(vertex);
-                if (!finishedVertexes.contains(otherVertex) && !standbyVertexes.contains(otherVertex)) {
-                    otherVertex.parent = vertex;
-                    otherVertex.level = vertex.level + 1;
+                var otherVertex = edge.getOtherVertex(vertex); // 获取可能的子顶点
+
+                // 如果边线所对应的顶点,已经属于等待处理或者已完成处理的顶点,则视为该边线与树结构无关,应该删除
+                if (standbyVertexes.contains(otherVertex) || finishedVertexes.contains(otherVertex)) {
+                    removedEdges.add(edge);
+                }
+                    // 其他情况，视为该边线与树结构有关
+                else {
+                    otherVertex.parent = vertex; // 设置父顶点
+                    otherVertex.level = vertex.level + 1; // 设置所在层级
 
                     finishedEdges.add(edge);
                     standbyVertexes.add(otherVertex);
-                }
-                else {
-                    removedEdges.add(edge);
                 }
             }
         });
     }
 
+    // 删除所有的无关边线
     removedEdges.each(function (edge) {
         edge.fromVertex.deleteDestinationEdge(edge);
         edge.toVertex.deleteSourceEdge(edge);
