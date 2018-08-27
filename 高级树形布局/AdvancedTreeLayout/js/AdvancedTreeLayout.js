@@ -15,6 +15,26 @@ function AdvancedTreeLayout() {
 };
 go.Diagram.inherit(AdvancedTreeLayout, go.TreeLayout);
 
+AdvancedTreeLayout.prototype.assignTreeVertexValues = function (vertex) {
+    //var possibleParents = this.isDirected ? vertex.sourceVertexes : vertex.vertexes;
+    //if (possibleParents && possibleParents.count > 0) {
+    //    var topMostParent = null;
+    //    possibleParents.each(function (v) {
+    //        if (!topMostParent || v.level < topMostParent.level) {
+    //            topMostParent = v;
+    //        }
+    //    });
+
+    //    if (topMostParent && topMostParent !== vertex.parent && topMostParent.level < vertex.level - 1) {
+    //        vertex.parent = topMostParent;
+    //        vertex.level = vertex.parent.level + 1;
+    //    }
+    //}
+
+    //go.TreeLayout.prototype.assignTreeVertexValues.apply(this, arguments);
+
+};
+
 /**
 * 控制目标顶点的所有关联边线方向
 *
@@ -62,6 +82,78 @@ AdvancedTreeLayout.prototype.controlEdgesDirection = function (vertex, finishedV
             }
         }
     }
+};
+
+AdvancedTreeLayout.prototype.initializeTreeVertexValues = function (vertex) {
+    //var possibleChildren = this.isDirected ? vertex.destinationVertexes : vertex.vertexes;
+    //if (possibleChildren.count > 0) {
+    //    possibleChildren.each(function (child) {
+    //        if (vertex.level < child.level - 1 && child.parent !== vertex) {
+    //            child.parent = vertex;
+    //            child.level = vertex.level + 1;
+
+    //            var edges = this.isDirected ? child.sourceEdges : child.edges;
+    //            if (edges.count > 0) {
+    //                var deleteEdges = new go.List();
+    //                edges.each(function (edge) {
+    //                    var otherVertex = edge.getOtherVertex(child);
+    //                    if (otherVertex.level < child.level) {
+    //                        deleteEdges.add(edge);
+    //                        edge.fromVertex.deleteDestinationEdge(edge);
+    //                        edge.toVertex.deleteSourceEdge(edge);
+    //                    }
+    //                });
+
+    //                deleteEdges.each(function (edge) {
+    //                    edge.fromVertex.deleteDestinationEdge(edge);
+    //                    edge.toVertex.deleteSourceEdge(edge);
+    //                });
+    //            }
+    //        }
+    //    });
+
+    //}
+
+    go.TreeLayout.prototype.initializeTreeVertexValues.apply(this, arguments);
+};
+
+AdvancedTreeLayout.prototype.findRoots = function () {
+    go.TreeLayout.prototype.findRoots.call(this);
+
+    var roots = this.roots;
+    var standbyVertexes = new go.Set().addAll(roots);
+    var finishedVertexes = new go.Set();
+    var finishedEdges = new go.Set();
+    var removedEdges = new go.Set();
+
+    while (standbyVertexes.count > 0) {
+        var vertex = standbyVertexes.first();
+
+        standbyVertexes.remove(vertex);
+        finishedVertexes.add(vertex);
+
+        var edges = this.isDirected ? vertex.destinationEdges : vertex.edges;
+        edges.each(function (edge) {
+            if (!finishedEdges.contains(edge) && !removedEdges.contains(edge)) {
+                var otherVertex = edge.getOtherVertex(vertex);
+                if (!finishedVertexes.contains(otherVertex) && !standbyVertexes.contains(otherVertex)) {
+                    otherVertex.parent = vertex;
+                    otherVertex.level = vertex.level + 1;
+
+                    finishedEdges.add(edge);
+                    standbyVertexes.add(otherVertex);
+                }
+                else {
+                    removedEdges.add(edge);
+                }
+            }
+        });
+    }
+
+    removedEdges.each(function (edge) {
+        edge.fromVertex.deleteDestinationEdge(edge);
+        edge.toVertex.deleteSourceEdge(edge);
+    });
 };
 
 /**

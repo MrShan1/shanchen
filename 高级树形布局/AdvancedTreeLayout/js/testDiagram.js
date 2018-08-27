@@ -111,7 +111,7 @@ function createLayout() {
 function loadData() {
     var model = diagram.model;
 
-    generateNodes(model, 20, 50);
+    generateNodes(model, 20, 20);
     generateLinks(model, 1, 5);
 
     diagram.nodes.each(function (node) {
