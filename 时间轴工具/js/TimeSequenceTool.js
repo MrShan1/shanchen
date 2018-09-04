@@ -1239,20 +1239,27 @@
                 ),
                 // 信息面板
                 $$(go.Panel, "Auto",
+                    {
+                        background: "gray",
+                        alignment: go.Spot.Center
+                    },
                     // 边框图形
                     $$(go.Shape, "RoundedRectangle",
                         {
                             name: "TEXT_PANEL_SHAPE",
                             fill: "aliceblue",
-                            stroke: "darkgrey"
+                            stroke: "darkgrey",
+                            alignment: go.Spot.Center
                         }
                     ),
                     // 信息文本
                     $$(go.TextBlock,
                         {
+                            background: "wheat",
                             font: "6pt sans-serif",
                             name: "TEXT",
                             stroke: "#606060",
+                            textAlign: "center"
                         },
                         new go.Binding("text", "", this.convertLTextByData)
                     )

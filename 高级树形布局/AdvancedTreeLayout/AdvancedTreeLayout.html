@@ -12,8 +12,12 @@
             diagram.selection.each(function (part) {
                 part instanceof go.Node && list.add(part);
             });
-
+            //diagram.isTreePathToChildren = false;
             diagram.layout.defaultRootNodes = list;
+            //diagram.layout.layerStyle = go.TreeLayout.LayerSiblings;
+            diagram.layout.layerStyle = go.TreeLayout.LayerUniform;
+            //diagram.layout.path = go.TreeLayout.PathSource;
+            //diagram.layout.path = go.TreeLayout.PathDestination;
 
             diagram.layoutDiagram(true);
         };

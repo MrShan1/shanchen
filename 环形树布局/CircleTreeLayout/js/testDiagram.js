@@ -184,21 +184,93 @@ function loadData() {
     generateLinks(model, 1, 5);
 
     diagram.nodes.each(function (node) {
-        var count = node.findTreeParts().count;
-        //var count = node.findLinksOutOf().count;
-        var importance = 1;
+        computeNodeWeight(node);
+    });
 
-        if (count < 100) {
-            importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.2;
+    diagram.nodes.each(function (node) {
+        var weight = node.totalWeight;
+        var importance = 1;
+        //var p = 5;
+        var p = 1;
+
+        if (weight < 100) {
+            importance = 1 + Math.floor(weight * 100 / p) / 100 * 0.2;
         }
         else {
-            importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.1;
+            importance = 1 + Math.floor(weight * 100 / p) / 100 * 0.1;
         }
 
         diagram.model.setDataProperty(node.data, "importance", importance);
     });
 
+    //diagram.nodes.each(function (node) {
+    //    var count = node.findTreeParts().count;
+    //    //var count = node.findLinksOutOf().count;
+    //    var importance = 1;
+
+    //    if (count < 100) {
+    //        importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.2;
+    //    }
+    //    else {
+    //        importance = 1 + Math.floor(count * 100 / 5) / 100 * 0.1;
+    //    }
+
+    //    diagram.model.setDataProperty(node.data, "importance", importance);
+    //});
+
     diagram.layoutDiagram(true);
+};
+
+function computeNodeWeight(node) {
+    var weightFunction = "findNodesConnected";
+    //var weightFunction = "findTreeParts";
+
+    if (node.totalWeight === undefined) node.totalWeight = 0;
+
+    var neiborNodes = node[weightFunction]();
+
+    if (node.selfWeight === undefined && neiborNodes.count > 0) {
+        var weight = neiborNodes.count;
+
+        //var level = node.findTreeLevel() + 1;
+        //weight += 10 / (level * level);
+
+        node.selfWeight = weight;
+        node.totalWeight += node.selfWeight;
+    }
+
+    var standbyNodes = new go.List();
+    var finishedNodes = new go.List();
+    var weight = node.selfWeight - 1;
+
+    standbyNodes.add(node);
+
+    while (weight >= 1 && standbyNodes.count > 0) {
+        var wholeNeighborNodes = new go.Set();
+
+        standbyNodes.each(function (stanby) {
+            finishedNodes.add(stanby);
+
+            if (stanby.neighborWeight === undefined) stanby.neighborWeight = 0;
+            if (stanby.totalWeight === undefined) stanby.totalWeight = 0;
+
+            stanby.neighborWeight += weight;
+            stanby.totalWeight += weight;
+
+            var neighborNodes = stanby.findNodesConnected();
+            neighborNodes.each(function (neighbor) {
+                if (!standbyNodes.contains(neighbor) && !finishedNodes.contains(neighbor)) {
+                    wholeNeighborNodes.add(neighbor);
+                }
+            });
+        });
+
+        weight -= 1;
+
+        standbyNodes.clear();
+        standbyNodes.addAll(wholeNeighborNodes);
+    }
+
 };
 
 function generateNodes(model, min, max) {
