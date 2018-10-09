@@ -21,11 +21,16 @@
     <script type="text/javascript">
         function init() {
             // 使用指定的文档元素创建地图
-            var map = new OpenLayers.Map("rcp1_map");
-            // 创建一个 OpenStreeMap raster layer
+            var map = new OpenLayers.Map("rcp1_map", { controls: [] });
+
+            // 创建并添加OpenStreeMap图层
             var osm = new OpenLayers.Layer.OSM();
-            // 把这个图层添加到map中
             map.addLayer(osm);
+
+            // 添加缩放控件
+            var panZoomBar = new OpenLayers.Control.PanZoomBar();
+            map.addControl(panZoomBar);
+
             // 设定视图缩放地图程度为最大
             map.zoomToMaxExtent();
         }
