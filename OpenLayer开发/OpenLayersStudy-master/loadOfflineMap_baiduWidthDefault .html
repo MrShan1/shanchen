@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>演示在ol3中加载本地磁盘存储的离线瓦片地图</title>
+    <link rel="stylesheet" type="text/css" href="ol3.7.0/ol.css">
+    <script type="text/javascript" src="ol3.7.0/ol.js" charset="utf-8"></script>
+    <script src="js/jquery-3.3.1.min.js"></script>
+</head>
+<body>
+    <div>这是演示在ol3中加载本地磁盘存储的离线瓦片地图的demo，该例子里面的离线地图放在目录offlineMapTiles里面，作为演示，只放了一个zoom为4的成都的瓦片，地图zoom设置为4，中心设置为成都，从而地图显示时只有一个瓦片，效果如下。更多ol3的分享参见<a href="http://www.jianshu.com/collection/f12ef1a164da">OpenLayers 3专题</a> </div>
+    <div id="map" style="width:100%;"></div>
+    <script type="text/javascript">
+        // 自定义分辨率和瓦片坐标系
+        var resolutions = [];
+        var maxZoom = 18;
+
+        // 计算百度使用的分辨率
+        for (var i = 0; i <= maxZoom; i++) {
+            resolutions[i] = Math.pow(2, maxZoom - i);
+        }
+        var tilegrid = new ol.tilegrid.TileGrid({
+            origin: [0, 0],
+            resolutions: resolutions    // 设置分辨率
+        });
+
+        // 创建百度地图的数据源
+        var baiduSource = new ol.source.TileImage({
+            projection: 'EPSG:3857',
+            tileGrid: tilegrid,
+            tileUrlFunction: function (tileCoord, pixelRatio, proj) {
+                var z = tileCoord[0];
+                var x = tileCoord[1];
+                var y = tileCoord[2];
+
+                // 百度瓦片服务url将负数使用M前缀来标识
+                if (x < 0) {
+                    x = -x;
+                }
+                if (y < 0) {
+                    y = -y;
+                }
+
+                var url = "offlineMapTiles/gugong/" + z + "/" + x + "/" + y + ".png";
+                var isExist = true;
+                $.ajax(url, {
+                    type: 'get',
+                    async: false,
+                    success: function () {
+
+                    },
+                    error: function () {
+                        isExist = false;
+                    }
+                });
+
+                // 失败时加载默认图片
+                if (isExist) {
+                    return url;
+                }
+                else {
+                    return "offlineMapTiles/unknown.png";
+                }
+            }
+        });
+
+        // 百度地图层
+        var baiduMapLayer2 = new ol.layer.Tile({
+            source: baiduSource
+        });
+
+        // 创建地图
+        var map = new ol.Map({
+            layers: [
+                baiduMapLayer2
+            ],
+            view: new ol.View({
+                // 设置故宫为地图中心
+                center: ol.proj.transform([116.40, 39.92], 'EPSG:4326', 'EPSG:3857'),
+                zoom: 10
+            }),
+            target: 'map'
+        });
+    </script>
+</body>
+</html>
