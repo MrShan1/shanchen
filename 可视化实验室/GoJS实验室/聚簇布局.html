@@ -3,8 +3,8 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title></title>
-    <!--<script src="js/go-debug-1.8.7.js"></script>-->
-    <script src="../js/go-debug-1.8.7.js"></script>
+    <script src="js/go-debug-1.8.7.js"></script>
+    <!--<script src="../js/go-debug-1.8.7.js"></script>-->
     <script>
         var $$ = go.GraphObject.make;
         var diagram = null;
@@ -93,9 +93,9 @@
                         //isInitial: true,
                         //isOngoing: false,
                         //defaultGravitationalMass: 100,
-                        defaultElectricalCharge: 100,
+                        defaultElectricalCharge: 30,
                         defaultCommentElectricalCharge: 20,
-                        defaultSpringLength: 50,
+                        defaultSpringLength: 10,
                         defaultCommentSpringLength: 10,
                         maxIterations: 500,
                         //moveLimit: 1000,
@@ -110,10 +110,60 @@
                                     neighbor.charge = self.defaultCommentElectricalCharge;
                                     neighbor.edges.first().length = self.defaultCommentSpringLength;
                                 }
-                            })
+                            });
                         },
                         electricalCharge: function (v) {
-                            return this.defaultElectricalCharge + v.vertexes.count * 80;
+                            //return this.defaultElectricalCharge + v.vertexes.count * 80;
+                            var commentNum = 0;
+                            v.vertexes.each(function (neighbor) {
+                                if (neighbor.vertexes.count === 1) {
+                                    commentNum++;
+                                }
+                            });
+
+                            var charge = this.defaultElectricalCharge;
+                            charge = commentNum > 0 ? charge + 100 : charge;
+                            return charge + commentNum * 80; // 孩子越多，电荷越大
+                        },
+                        springLength: function (e) {
+                            var fromCommentNum = 0;
+                            var toCommentNum = 0;
+
+                            e.fromVertex.vertexes.each(function (neighbor) {
+                                if (neighbor.vertexes.count === 1) {
+                                    fromCommentNum++;
+                                }
+                            });
+
+                            e.toVertex.vertexes.each(function (neighbor) {
+                                if (neighbor.vertexes.count === 1) {
+                                    toCommentNum++;
+                                }
+                            });
+
+                            var length = this.defaultSpringLength;
+                            if (fromCommentNum > 0 || toCommentNum > 0) length += 50;
+                            return length + (fromCommentNum + toCommentNum) * 2; // 孩子越多，弹簧初始长度越大
+                        },
+                        makeNetwork: function (coll) {
+                            var network = go.ForceDirectedLayout.prototype.makeNetwork(coll);
+                            network.deleteSelfEdges();
+                            network.vertexes.each(function (v) {
+                                var neighbors = new go.Set();
+                                var removedEdges = new go.List();
+                                v.edges.each(function (e) {
+                                    if (neighbors.contains(e.fromVertex) || neighbors.contains(e.toVertex)) {
+                                        removedEdges.add(e);
+                                    }
+                                    else {
+                                        e.fromVertex === v ? neighbors.add(e.toVertex) : neighbors.add(e.fromVertex);
+                                    }
+                                });
+                                removedEdges.each(function (e) {
+                                    network.deleteEdge(e);
+                                });
+                            });
+                            return network;
                         }
                     }
                 );
