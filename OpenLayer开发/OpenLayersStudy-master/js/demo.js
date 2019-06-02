@@ -15,7 +15,7 @@ var map = new ol.Map({
 });
 var geoJsonLayer = new ol.layer.Vector({
     source: new ol.source.Vector({
-        url: "js/test.js",
+        url: "data/countries.geojson",
         format: new ol.format.GeoJSON()
     }),
     style: new ol.style.Style({
