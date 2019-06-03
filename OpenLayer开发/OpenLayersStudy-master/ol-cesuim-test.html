@@ -11,10 +11,11 @@
     <!--<link href="js/ol5.2.0/ol.css" rel="stylesheet" />
     <script src="js/ol5.2.0/ol.js"></script>-->
     <!-- Cesium -->
-    <script src="js/Cesium/CesiumUnminified/Cesium.js"></script>
+    <!--<script src="js/Cesium/CesiumUnminified/Cesium.js"></script>-->
+    <script src="js/Cesium/Cesium/Cesium.js"></script>
     <!-- olcesium -->
     <!--<link href="js/ol-cesuim/olcs.css" rel="stylesheet" />-->
-    <script src="js/ol-cesuim/olcesium.js"></script>
+    <script src="js/ol-cesium/olcesium.js"></script>
     <!-- 页面功能 -->
     <script type="text/javascript">
         function init() {
@@ -34,8 +35,8 @@
             });
             const styles = {
                 'Point': [new ol.style.Style({
-                    image
-                    })],
+                    image: image
+                })],
                 'LineString': [new ol.style.Style({
                     stroke: new ol.style.Stroke({
                         color: 'green',
@@ -50,13 +51,13 @@
                     })
                 })],
                 'MultiPoint': [new ol.style.Style({
-                    image,
-                        text: new ol.style.Text({
-                            text: 'MP',
-                            stroke: new ol.style.Stroke({
-                                color: 'purple'
-                            })
+                    image: image,
+                    text: new ol.style.Text({
+                        text: 'MP',
+                        stroke: new ol.style.Stroke({
+                            color: 'purple'
                         })
+                    })
                 })],
                 'MultiPolygon': [new ol.style.Style({
                     stroke: new ol.style.Stroke({
@@ -75,7 +76,7 @@
                     }),
                     fill: new ol.style.Fill({
                         //color: 'rgba(0, 0, 255, 0.1)'
-                        color: 'red'
+                        color: 'rgba(0, 88, 255, 0.3)'
                     })
                 })],
                 'GeometryCollection': [new ol.style.Style({
@@ -114,6 +115,48 @@
                 // always assign a style to prevent feature skipping
                 return geo ? styles[geo.getType()] : styles['Point'];
             };
+            const selectStyleFunction = function (feature) {
+                var style = null;
+                var geo = feature.getGeometry();
+                if (geo.getType() === "Point") {
+                    style = new ol.style.Style({
+                        image: new ol.style.Circle({
+                            radius: 17, // 图形大小，单位为像素
+                            fill: new ol.style.Fill({
+                                color: "green"
+                            }),
+                            stroke: new ol.style.Stroke({
+                                color: "red",
+                                width: 3
+                            })
+                        })
+                    })
+                }
+                else {
+                    style = new ol.style.Style({
+                        //geometry: geo,
+                        fill: new ol.style.Fill({
+                            color: "rgba(205, 92, 92, 0.7)"
+                        }),
+                        stroke: new ol.style.Stroke({
+                            color: "red",
+                            width: 3
+                        }),
+                        text: new ol.style.Text({
+                            text: "测试",
+                            placement: "line",
+                            fill: new ol.style.Fill({
+                                color: "black"
+                            }),
+                            stroke: new ol.style.Stroke({
+                                color: "gray",
+                                width: 3
+                            })
+                        }),
+                    });
+                }
+                return style;
+            }
             const vectorLayer = new ol.layer.Vector({
                 //style: new ol.style.Style({
                 //    fill: new ol.style.Fill({
@@ -126,13 +169,59 @@
                 //}),
                 style: styleFunction
             });
+            const selectInteraction = new ol.interaction.Select({
+                layers: [vectorLayer],
+                style: function (feature) {
+                    var style = null;
+                    var geo = feature.getGeometry();
+                    if (geo.getType() === "Point") {
+                        style = new ol.style.Style({
+                            image: new ol.style.Circle({
+                                radius: 17, // 图形大小，单位为像素
+                                fill: new ol.style.Fill({
+                                    color: "green"
+                                }),
+                                stroke: new ol.style.Stroke({
+                                    color: "red",
+                                    width: 3
+                                })
+                            })
+                        })
+                    }
+                    else {
+                        style = new ol.style.Style({
+                            //geometry: geo,
+                            fill: new ol.style.Fill({
+                                color: "rgba(205, 92, 92, 0.7)"
+                            }),
+                            stroke: new ol.style.Stroke({
+                                color: "red",
+                                width: 3
+                            }),
+                            text: new ol.style.Text({
+                                text: "测试",
+                                placement: "line",
+                                fill: new ol.style.Fill({
+                                    color: "black"
+                                }),
+                                stroke: new ol.style.Stroke({
+                                    color: "gray",
+                                    width: 3
+                                })
+                            }),
+                        });
+                    }
+
+                    return style;
+                }
+            })
 
             view = new ol.View({
                 center: ol.proj.transform([106, 30], 'EPSG:4326', 'EPSG:3857'),
                 zoom: 4
             });
             map = new ol.Map({
-                interactions: ol.interaction.defaults().extend([dragAndDropInteraction]),
+                interactions: ol.interaction.defaults().extend([selectInteraction]),
                 layers: [new ol.layer.Tile({
                     baseLayer: true,
                     source: new ol.source.OSM(),
@@ -150,7 +239,9 @@
 
             // 矢量图层
             //map.addLayer(geoJsonLayer);
-            setTimeout(() => vectorLayer.setSource(vectorSource), 2000);
+            setTimeout(function () {
+                vectorLayer.setSource(vectorSource);
+            }, 2000);
 
             ///三维
             //map3d = new olcs.OLCesium({ map: map, target: 'map3d' });
@@ -164,10 +255,69 @@
             //ol3d.setEnabled(true);
 
             Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0MzAyNzUyYi0zY2QxLTQxZDItODRkOS1hNTA3MDU3ZTBiMDUiLCJpZCI6MjU0MSwiaWF0IjoxNTMzNjI1MTYwfQ.oHn1SUWJa12esu7XUUtEoc1BbEbuZpRocLetw6M6_AA';
-            const ol3d = new olcs.OLCesium({ map, target: 'map'});
+            const ol3d = new olcs.OLCesium({ map: map, target: 'map' });
             const scene = ol3d.getCesiumScene();
             scene.terrainProvider = Cesium.createWorldTerrain();
             ol3d.setEnabled(true);
+
+            var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+            handler.setInputAction(function (movement) {
+                var pickedPrimitive = scene.pick(movement.position);
+                //var pickedEntity = (Cesium.defined(pickedPrimitive)) ? pickedPrimitive.id : undefined;
+                if (pickedPrimitive) {
+                    var feature = pickedPrimitive.primitive.olFeature;
+                    //var id = pickedPrimitive.primitive.olFeature.getId();
+                    ////alert(id);
+                    var style = selectStyleFunction(pickedPrimitive.primitive.olFeature);
+                    feature.setStyle(style);
+
+                    // 旋转至指定位置
+                    var ellipsoid = scene.globe.ellipsoid;
+                    var cartesian = scene.camera.pickEllipsoid(movement.position, ellipsoid);
+                    if (cartesian) {
+                        //将笛卡尔坐标转换为地理坐标
+                        var cartographic = ellipsoid.cartesianToCartographic(cartesian);
+                        //将弧度转为度的十进制度表示
+                        var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+                        var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+
+                        //map.getView().animate({
+                        //    //center: ol.proj.fromLonLat([116.3905856200, 39.9164989600]),
+                        //    center: ol.proj.fromLonLat([longitude, latitude]),
+                        //    zoom: 6,
+                        //    easing: ol.easing.linear,
+                        //    //duration: 2000
+                        //});
+
+                        var extent = feature.getGeometry().getExtent();
+                        map.getView().animate({
+                            //center: ol.proj.fromLonLat([116.3905856200, 39.9164989600]),
+                            //center: ol.proj.fromLonLat([longitude, latitude]),
+                            center: ol.extent.getCenter(extent),
+                            extent: extent,
+                            //nearest: true,
+                            //zoom: 6,
+                            minZoom: 3,
+                            maxZoom: 10,
+                            easing: ol.easing.inAndOut,
+                            //duration: 2000
+                        });
+                    }
+
+
+                    //scene.camera.flyTo(new Cesium.Cartesian3({
+                    //    destination: Cesium.Cartesian3.fromDegrees(10,10,0),
+                    //    orientation : {
+                    //        heading : Cesium.Math.toRadians(0.0),
+                    //        pitch : Cesium.Math.toRadians(-25.0),
+                    //        roll : 0.0
+                    //    }
+                    //}));
+                }
+                else {
+                    alert("空");
+                }
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
         }
     </script>
 </head>
