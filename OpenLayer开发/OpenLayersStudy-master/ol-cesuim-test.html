@@ -305,9 +305,8 @@
                             //minZoom: 3,
                             //maxZoom: 10,
                             easing: ol.easing.inAndOut,
-                            callback: function () { alert("结束") }
                             //duration: 2000
-                        });
+                        }, function () { console.log(feature.getId()) });
                     }
 
 
