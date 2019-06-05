@@ -15,7 +15,8 @@ var map = new ol.Map({
 });
 var geoJsonLayer = new ol.layer.Vector({
     source: new ol.source.Vector({
-        url: "data/countries.geojson",
+        //url: "data/countries.geojson",
+        url: "js/test.js",
         format: new ol.format.GeoJSON()
     }),
     style: new ol.style.Style({
@@ -126,6 +127,10 @@ function init() {
             '<img src="images/logo.png" style="width: 150px;"></img>'
         ]
     }); // 谷歌地图
+    // arcgis地图服务
+    //var source = new ol.source.TileArcGISRest({
+    //    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+    //});
     //var source = getBaiduSource(); // 百度地图
     layer.setSource(source);
 
