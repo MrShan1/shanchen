@@ -295,6 +295,7 @@
                         //});
 
                         var extent = feature.getGeometry().getExtent();
+                        map.getView().cancelAnimations();
                         map.getView().animate({
                             //center: ol.proj.fromLonLat([116.3905856200, 39.9164989600]),
                             //center: ol.proj.fromLonLat([longitude, latitude]),
@@ -305,8 +306,12 @@
                             //minZoom: 3,
                             //maxZoom: 10,
                             easing: ol.easing.inAndOut,
-                            //duration: 2000
-                        }, function () { console.log(feature.getId()) });
+                            duration: 5000
+                        }, function (isFinished) {
+                            if (isFinished) {
+                                console.log(feature.getId())
+                            }
+                        });
                     }
 
 
