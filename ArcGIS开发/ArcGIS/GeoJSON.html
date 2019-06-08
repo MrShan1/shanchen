@@ -24,11 +24,15 @@
           "esri/layers/GeoJSONLayer",
           "esri/views/MapView",
           "esri/views/SceneView",
-        ], function (Map, GeoJSONLayer, MapView, SceneView) {
+          "esri/layers/support/Field"
+        ], function (Map, GeoJSONLayer, MapView, SceneView, Field) {
             // If GeoJSON files are not on the same domain as your website, a CORS enabled server
             // or a proxy is required.
+            //const url =
+            //  "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
+
             const url =
-              "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
+              "json/countries.geojson";
 
             // Paste the url into a browser's address bar to download and view the attributes
             // in the GeoJSON file. These attributes include:
@@ -71,11 +75,20 @@
                 ]
             };
 
+            const fields = [
+                 new Field({
+                     "id": "id",
+                     "name": "name",
+                     "type": "string"
+                 })
+            ];
+
             const geojsonLayer = new GeoJSONLayer({
                 url: url,
-                copyright: "USGS Earthquakes",
-                popupTemplate: template,
-                renderer: renderer //optional
+                fields: fields
+                //copyright: "USGS Earthquakes",
+                //popupTemplate: template,
+                //renderer: renderer //optional
             });
 
             const map = new Map({
@@ -88,6 +101,25 @@
                 center: [-168, 46],
                 zoom: 3,
                 map: map
+            });
+
+            view.on("click", function (event) {
+                var screenPoint = {
+                    x: event.x,
+                    y: event.y
+                };
+                // Search for graphics at the clicked location
+                view.hitTest(screenPoint).then(function (response) {
+                    var result = response.results[0];
+
+                    if (result && result.graphic) {
+                        view.goTo(result.graphic.geometry);
+                        //var lon = result.mapPoint.longitude;
+                        //var lat = result.mapPoint.latitude;
+
+                        //alert("Hit surface at (" + lon + ", " + lat + "), graphic:" + result.graphic.name);
+                    }
+                });
             });
         });
     </script>
