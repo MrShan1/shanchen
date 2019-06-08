@@ -25,6 +25,7 @@ var geoJsonLayer = new ol.layer.Vector({
         }),
         stroke: new ol.style.Stroke({
             color: "rgba(0, 112, 210, 0.2)",
+            //color: "gray",
             width: 3
         })
     })
@@ -66,6 +67,7 @@ var featureLayer = new ol.layer.Vector({
 });
 var currentPosition = null;
 var selectInteraction = new ol.interaction.Select({
+    //id : "select",
     layers: [featureLayer, drawLayer, geoJsonLayer],
     style: function (feature) {
         var style = null;

@@ -167,6 +167,7 @@
                 //        width: 3
                 //    })
                 //}),
+                id: "test",
                 style: styleFunction
             });
             const selectInteraction = new ol.interaction.Select({
@@ -230,7 +231,7 @@
             });
             map = new ol.Map({
                 interactions: ol.interaction.defaults().extend([selectInteraction]),
-                layers: [tileLayer, vectorLayer],
+                //layers: [tileLayer, vectorLayer],
                 target: 'map',
                 //controls: ol.control.defaults({
                 //    attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
@@ -240,6 +241,9 @@
                 loadTilesWhileAnimating: true,
                 view: view
             });
+
+            map.addLayer(tileLayer);
+            map.addLayer(vectorLayer);
 
             // 矢量图层
             //map.addLayer(geoJsonLayer);
@@ -306,7 +310,7 @@
                             //minZoom: 3,
                             //maxZoom: 10,
                             easing: ol.easing.inAndOut,
-                            duration: 5000
+                            duration: 2000
                         }, function (isFinished) {
                             if (isFinished) {
                                 console.log(feature.getId())
