@@ -107,8 +107,8 @@
             };
             const vectorSource = new ol.source.Vector({
                 format: new ol.format.GeoJSON(),
-                url: "data/countries.geojson",
-                //url: "data/vector_data.geojson"
+                //url: "data/countries.geojson",
+                url: "data/ne_10m_admin_0_countries.geojson"
             });
             const styleFunction = function (feature, resolution) {
                 const geo = feature.getGeometry();
